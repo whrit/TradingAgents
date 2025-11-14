@@ -1,26 +1,21 @@
-# Environment Configuration for TradingAgents
-
 # Alpaca API Configuration
-# Get your API keys from: https://app.alpaca.markets/paper/dashboard/overview
+# Copy this file to .env and fill in your credentials
 
 # Paper Trading (Recommended for Testing)
+# Get your paper trading keys from: https://app.alpaca.markets/paper/dashboard/overview
 ALPACA_API_KEY=your_paper_api_key_here
 ALPACA_SECRET_KEY=your_paper_secret_key_here
 ALPACA_BASE_URL=https://paper-api.alpaca.markets
 
 # Live Trading (Use with Caution - Real Money!)
-# Uncomment these lines and comment out paper trading settings when ready for production
+# Uncomment and use your live trading credentials only when ready for production
 # ALPACA_API_KEY=your_live_api_key_here
 # ALPACA_SECRET_KEY=your_live_secret_key_here
 # ALPACA_BASE_URL=https://api.alpaca.markets
 
-# Optional: Data API URL
+# Optional: Data API URL (usually not needed)
 # ALPACA_DATA_URL=https://data.alpaca.markets
 
 # Optional: Custom timeout and retry settings
 # ALPACA_TIMEOUT=30
 # ALPACA_MAX_RETRIES=3
-
-# Other API Keys (if needed for other integrations)
-# OPENAI_API_KEY=your_openai_key_here
-# ANTHROPIC_API_KEY=your_anthropic_key_here

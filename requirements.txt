@@ -24,3 +24,12 @@ rich
 questionary
 langchain_anthropic
 langchain-google-genai
+
+# Alpaca Trading Integration
+python-dotenv
+urllib3
+
+# Testing (for Alpaca module tests)
+pytest
+pytest-cov
+pytest-mock

@@ -1,0 +1,34 @@
+{
+  "invalid_credentials": {
+    "code": 40110000,
+    "message": "access key verification failed"
+  },
+  "rate_limit": {
+    "code": 42910000,
+    "message": "rate limit exceeded"
+  },
+  "insufficient_funds": {
+    "code": 40310000,
+    "message": "insufficient buying power"
+  },
+  "invalid_symbol": {
+    "code": 40010001,
+    "message": "symbol is not valid"
+  },
+  "market_closed": {
+    "code": 40310001,
+    "message": "market is closed"
+  },
+  "forbidden": {
+    "code": 40310000,
+    "message": "forbidden"
+  },
+  "order_not_found": {
+    "code": 40410000,
+    "message": "order not found"
+  },
+  "position_not_found": {
+    "code": 40410000,
+    "message": "position does not exist"
+  }
+}

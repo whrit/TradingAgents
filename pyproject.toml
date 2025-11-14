@@ -21,6 +21,10 @@ dependencies = [
     "pandas>=2.3.0",
     "parsel>=1.10.0",
     "praw>=7.8.1",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "python-dotenv>=1.1.0",
     "pytz>=2025.2",
     "questionary>=2.1.0",
     "redis>=6.2.0",
@@ -31,5 +35,6 @@ dependencies = [
     "tqdm>=4.67.1",
     "tushare>=1.4.21",
     "typing-extensions>=4.14.0",
+    "urllib3>=2.4.0",
     "yfinance>=0.2.63",
 ]
