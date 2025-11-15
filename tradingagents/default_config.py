@@ -10,8 +10,8 @@ DEFAULT_CONFIG = {
     ),
     # LLM settings
     "llm_provider": "openai",
-    "deep_think_llm": "o4-mini",
-    "quick_think_llm": "gpt-4o-mini",
+    "deep_think_llm": "gpt-5.1",
+    "quick_think_llm": "gpt-5-mini",
     "backend_url": "https://api.openai.com/v1",
     # Debate and discussion settings
     "max_debate_rounds": 1,
@@ -33,7 +33,7 @@ DEFAULT_CONFIG = {
     # Broker configuration for trade execution
     "trading_broker": "alpaca",  # Currently only "alpaca" is supported
     "broker_mode": "paper",      # "paper" for paper trading, "live" for live trading
-    "auto_execute_trades": False,  # Must be True to enable live trading (safety feature)
+    "auto_execute_trades": True,  # Must be True to enable live trading (safety feature)
     # Alpaca credentials (loaded from environment variables)
     "alpaca_paper_api_key": os.getenv("ALPACA_PAPER_API_KEY"),
     "alpaca_paper_secret_key": os.getenv("ALPACA_PAPER_SECRET_KEY"),
