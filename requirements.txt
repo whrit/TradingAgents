@@ -26,6 +26,7 @@ langchain_anthropic
 langchain-google-genai
 
 # Alpaca Trading Integration
+alpaca-py
 python-dotenv
 urllib3
 

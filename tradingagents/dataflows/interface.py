@@ -16,6 +16,8 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
+from .alpaca import get_stock_data as get_alpaca_stock_data
+from .alpaca.common import AlpacaRateLimitError
 
 # Configuration and routing logic
 from .config import get_config
@@ -57,6 +59,8 @@ TOOLS_CATEGORIES = {
 VENDOR_LIST = [
     "local",
     "yfinance",
+    "alpaca",
+    "alpha_vantage",
     "openai",
     "google"
 ]
@@ -67,6 +71,7 @@ VENDOR_METHODS = {
     "get_stock_data": {
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
+        "alpaca": get_alpaca_stock_data,
         "local": get_YFin_data,
     },
     # technical_indicators
@@ -206,6 +211,12 @@ def route_to_vendor(method: str, *args, **kwargs):
             except AlphaVantageRateLimitError as e:
                 if vendor == "alpha_vantage":
                     print(f"RATE_LIMIT: Alpha Vantage rate limit exceeded, falling back to next available vendor")
+                    print(f"DEBUG: Rate limit details: {e}")
+                # Continue to next vendor for fallback
+                continue
+            except AlpacaRateLimitError as e:
+                if vendor == "alpaca":
+                    print(f"RATE_LIMIT: Alpaca rate limit exceeded, falling back to next available vendor")
                     print(f"DEBUG: Rate limit details: {e}")
                 # Continue to next vendor for fallback
                 continue

@@ -30,4 +30,13 @@ DEFAULT_CONFIG = {
         # Example: "get_stock_data": "alpha_vantage",  # Override category default
         # Example: "get_news": "openai",               # Override category default
     },
+    # Broker configuration for trade execution
+    "trading_broker": "alpaca",  # Currently only "alpaca" is supported
+    "broker_mode": "paper",      # "paper" for paper trading, "live" for live trading
+    "auto_execute_trades": False,  # Must be True to enable live trading (safety feature)
+    # Alpaca credentials (loaded from environment variables)
+    "alpaca_paper_api_key": os.getenv("ALPACA_PAPER_API_KEY"),
+    "alpaca_paper_secret_key": os.getenv("ALPACA_PAPER_SECRET_KEY"),
+    "alpaca_live_api_key": os.getenv("ALPACA_LIVE_API_KEY"),
+    "alpaca_live_secret_key": os.getenv("ALPACA_LIVE_SECRET_KEY"),
 }
