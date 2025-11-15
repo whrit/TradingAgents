@@ -1,16 +1,17 @@
 # TradingAgents/graph/trading_graph.py
 
-import os
-from pathlib import Path
 import json
+import logging
+import os
 from datetime import date
-from typing import Dict, Any, Tuple, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import ToolNode
+from tradingagents.brokers.interface import route_to_broker
 
 from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
@@ -41,6 +42,8 @@ from .setup import GraphSetup
 from .propagation import Propagator
 from .reflection import Reflector
 from .signal_processing import SignalProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class TradingAgentsGraph:
@@ -116,6 +119,7 @@ class TradingAgentsGraph:
         self.curr_state = None
         self.ticker = None
         self.log_states_dict = {}  # date to full state dict
+        self.last_execution_result = None
 
         # Set up the graph
         self.graph = self.graph_setup.setup_graph(selected_analysts)
@@ -190,7 +194,12 @@ class TradingAgentsGraph:
         self._log_state(trade_date, final_state)
 
         # Return decision and processed signal
-        return final_state, self.process_signal(final_state["final_trade_decision"])
+        decision = self.process_signal(final_state["final_trade_decision"])
+        execution = self._maybe_execute_trade(self.ticker, decision)
+        if execution:
+            final_state["broker_execution"] = execution
+
+        return final_state, decision
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""
@@ -255,3 +264,48 @@ class TradingAgentsGraph:
     def process_signal(self, full_signal):
         """Process a signal to extract the core decision."""
         return self.signal_processor.process_signal(full_signal)
+
+    def _maybe_execute_trade(self, symbol: str, decision: Optional[str]):
+        """Execute the final trade decision if automation is enabled."""
+        if not self.config.get("auto_execute_trades"):
+            return None
+
+        normalized = (decision or "").strip().upper()
+        if normalized not in {"BUY", "SELL"}:
+            return None
+
+        action = "buy" if normalized == "BUY" else "sell"
+        quantity = self.config.get("default_trade_quantity", 1)
+        order_type = self.config.get("default_order_type", "market")
+        time_in_force = self.config.get("default_time_in_force", "day")
+
+        try:
+            result = route_to_broker(
+                "place_order",
+                symbol,
+                quantity,
+                action,
+                order_type=order_type,
+                time_in_force=time_in_force,
+            )
+            self.last_execution_result = {
+                "symbol": symbol,
+                "decision": normalized,
+                "quantity": quantity,
+                "order_type": order_type,
+                "time_in_force": time_in_force,
+                "result": result,
+            }
+            logger.info("Executed %s decision for %s: %s", normalized, symbol, result)
+        except Exception as exc:  # noqa: BLE001 - log unexpected broker errors
+            logger.exception("Failed to execute %s order for %s", normalized, symbol)
+            self.last_execution_result = {
+                "symbol": symbol,
+                "decision": normalized,
+                "quantity": quantity,
+                "order_type": order_type,
+                "time_in_force": time_in_force,
+                "error": str(exc),
+            }
+
+        return self.last_execution_result

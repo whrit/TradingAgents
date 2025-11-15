@@ -33,7 +33,10 @@ DEFAULT_CONFIG = {
     # Broker configuration for trade execution
     "trading_broker": "alpaca",  # Currently only "alpaca" is supported
     "broker_mode": "paper",      # "paper" for paper trading, "live" for live trading
-    "auto_execute_trades": True,  # Must be True to enable live trading (safety feature)
+    "auto_execute_trades": False,  # Explicit opt-in before any automated execution
+    "default_trade_quantity": 1,   # Shares to trade when automation is enabled
+    "default_order_type": "market",
+    "default_time_in_force": "day",
     # Alpaca credentials (loaded from environment variables)
     "alpaca_paper_api_key": os.getenv("ALPACA_PAPER_API_KEY"),
     "alpaca_paper_secret_key": os.getenv("ALPACA_PAPER_SECRET_KEY"),

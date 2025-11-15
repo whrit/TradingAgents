@@ -55,6 +55,103 @@ class TestAlpacaTrading:
         mock_client.submit_order.assert_called_once()
 
     @patch('tradingagents.brokers.alpaca.trading.get_trading_client')
+    def test_place_order_stop_market(self, mock_get_client):
+        """Test placing a stop market order."""
+        from tradingagents.brokers.alpaca.trading import place_order, StopOrderRequest
+
+        mock_client = MagicMock()
+        mock_order = MagicMock()
+        mock_order.id = "789"
+        mock_order.symbol = "MSFT"
+        mock_order.side = "sell"
+        mock_order.qty = 3
+        mock_order.type = "stop"
+        mock_client.submit_order.return_value = mock_order
+        mock_get_client.return_value = mock_client
+
+        place_order("MSFT", 3, "sell", order_type="stop", stop_price=340.0)
+
+        submitted = mock_client.submit_order.call_args[0][0]
+        assert isinstance(submitted, StopOrderRequest)
+        assert submitted.stop_price == 340.0
+
+    @patch('tradingagents.brokers.alpaca.trading.get_trading_client')
+    def test_place_order_stop_limit(self, mock_get_client):
+        """Test placing a stop limit order."""
+        from tradingagents.brokers.alpaca.trading import place_order, StopLimitOrderRequest
+
+        mock_client = MagicMock()
+        mock_order = MagicMock()
+        mock_order.id = "111"
+        mock_order.symbol = "AMZN"
+        mock_order.side = "buy"
+        mock_order.qty = 1
+        mock_order.type = "stop_limit"
+        mock_client.submit_order.return_value = mock_order
+        mock_get_client.return_value = mock_client
+
+        place_order(
+            "AMZN",
+            1,
+            "buy",
+            order_type="stop_limit",
+            stop_price=3100.0,
+            limit_price=3105.0,
+        )
+
+        submitted = mock_client.submit_order.call_args[0][0]
+        assert isinstance(submitted, StopLimitOrderRequest)
+        assert submitted.limit_price == 3105.0
+        assert submitted.stop_price == 3100.0
+
+    @patch('tradingagents.brokers.alpaca.trading.get_trading_client')
+    def test_place_order_trailing_stop(self, mock_get_client):
+        """Test placing a trailing stop order."""
+        from tradingagents.brokers.alpaca.trading import place_order, TrailingStopOrderRequest
+
+        mock_client = MagicMock()
+        mock_order = MagicMock()
+        mock_order.id = "555"
+        mock_order.symbol = "NFLX"
+        mock_order.side = "sell"
+        mock_order.qty = 2
+        mock_order.type = "trailing_stop"
+        mock_client.submit_order.return_value = mock_order
+        mock_get_client.return_value = mock_client
+
+        place_order(
+            "NFLX",
+            2,
+            "sell",
+            order_type="trailing_stop",
+            trail_percent=2.5,
+        )
+
+        submitted = mock_client.submit_order.call_args[0][0]
+        assert isinstance(submitted, TrailingStopOrderRequest)
+        assert submitted.trail_percent == 2.5
+
+    @patch('tradingagents.brokers.alpaca.trading.get_trading_client')
+    def test_time_in_force_conversion(self, mock_get_client):
+        """Test time in force values are normalized."""
+        from tradingagents.brokers.alpaca.trading import place_order, TimeInForce
+
+        mock_client = MagicMock()
+        mock_order = MagicMock()
+        mock_order.id = "222"
+        mock_order.symbol = "AAPL"
+        mock_order.side = "buy"
+        mock_order.qty = 1
+        mock_order.type = "market"
+        mock_client.submit_order.return_value = mock_order
+        mock_get_client.return_value = mock_client
+
+        place_order("AAPL", 1, "buy", order_type="market", time_in_force="gtc")
+
+        submitted = mock_client.submit_order.call_args[0][0]
+        assert submitted.time_in_force == TimeInForce.GTC
+
+    @patch('tradingagents.brokers.alpaca.trading.get_trading_client')
     def test_place_order_invalid_side(self, mock_get_client):
         """Test that invalid order side raises ValueError."""
         from tradingagents.brokers.alpaca.trading import place_order
@@ -120,8 +217,8 @@ class TestAlpacaTrading:
         result = get_account()
 
         assert "Account Summary" in result
-        assert "10000.00" in result
-        assert "15000.00" in result
+        assert "10,000.00" in result
+        assert "15,000.00" in result
         assert "ACTIVE" in result
 
     @patch('tradingagents.brokers.alpaca.trading.get_trading_client')

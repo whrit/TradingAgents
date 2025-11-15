@@ -7,14 +7,20 @@ and manage accounts via the configured broker.
 from langchain_core.tools import tool
 from typing import Annotated
 
+from tradingagents.brokers.interface import route_to_broker
+
 
 @tool
 def execute_trade(
     symbol: Annotated[str, "Stock symbol (e.g., AAPL)"],
     quantity: Annotated[float, "Number of shares to trade (supports fractional shares)"],
     action: Annotated[str, "Trade action: 'buy' or 'sell'"],
-    order_type: Annotated[str, "Order type: 'market' or 'limit'"] = "market",
-    limit_price: Annotated[float, "Limit price for limit orders (optional)"] = None
+    order_type: Annotated[str, "Order type: market, limit, stop, stop_limit, trailing_stop"] = "market",
+    limit_price: Annotated[float, "Limit price for limit/stop_limit orders (optional)"] = None,
+    stop_price: Annotated[float, "Stop price for stop/stop_limit orders (optional)"] = None,
+    trail_price: Annotated[float, "Trailing stop dollar offset (optional)"] = None,
+    trail_percent: Annotated[float, "Trailing stop percent offset (optional)"] = None,
+    time_in_force: Annotated[str, "Time in force (day, gtc, opg, cls, ioc, fok)"] = "day",
 ) -> str:
     """Execute a trade via configured broker.
 
@@ -26,7 +32,11 @@ def execute_trade(
         quantity: Number of shares to trade (fractional shares supported)
         action: "buy" or "sell"
         order_type: "market" for immediate execution or "limit" for price-limited orders
-        limit_price: Required for limit orders - the maximum buy price or minimum sell price
+        limit_price: Required for limit/stop_limit orders - the max buy or min sell price
+        stop_price: Required for stop or stop_limit orders - trigger price
+        trail_price: Optional trailing stop offset in dollars
+        trail_percent: Optional trailing stop offset in percent
+        time_in_force: Order time-in-force, defaults to DAY
 
     Returns:
         str: Order confirmation message with order ID
@@ -40,15 +50,17 @@ def execute_trade(
         >>> execute_trade("TSLA", 5, "sell", order_type="limit", limit_price=250.50)
         "Order placed: TSLA sell 5 @ limit (ID: def456)"
     """
-    from tradingagents.brokers.interface import route_to_broker
-
     return route_to_broker(
         "place_order",
         symbol,
         quantity,
         action,
         order_type,
-        limit_price=limit_price
+        limit_price=limit_price,
+        stop_price=stop_price,
+        trail_price=trail_price,
+        trail_percent=trail_percent,
+        time_in_force=time_in_force,
     )
 
 
@@ -68,8 +80,6 @@ def get_portfolio_positions() -> str:
         - AAPL: 10 shares @ $150.50 (P&L: $25.00)
         - TSLA: 5 shares @ $240.00 (P&L: -$12.50)"
     """
-    from tradingagents.brokers.interface import route_to_broker
-
     return route_to_broker("get_positions")
 
 
@@ -91,8 +101,6 @@ def get_account_balance() -> str:
         Buying Power: $20000.00
         Status: ACTIVE"
     """
-    from tradingagents.brokers.interface import route_to_broker
-
     return route_to_broker("get_account")
 
 

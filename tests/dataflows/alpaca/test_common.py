@@ -68,6 +68,42 @@ class TestAlpacaCredentials:
             with pytest.raises(ValueError, match="ALPACA_SECRET_KEY"):
                 get_alpaca_credentials()
 
+    def test_falls_back_to_paper_credentials(self, monkeypatch):
+        """Test fallback to ALPACA_PAPER_* environment variables."""
+        from tradingagents.dataflows.alpaca.common import get_alpaca_credentials
+
+        monkeypatch.delenv('ALPACA_API_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_SECRET_KEY', raising=False)
+        monkeypatch.setenv('ALPACA_PAPER_API_KEY', 'paper_key')
+        monkeypatch.setenv('ALPACA_PAPER_SECRET_KEY', 'paper_secret')
+
+        api_key, secret = get_alpaca_credentials()
+        assert api_key == 'paper_key'
+        assert secret == 'paper_secret'
+
+    def test_falls_back_to_config_credentials(self, monkeypatch):
+        """Test fallback to config values when no environment variables set."""
+        from tradingagents.dataflows.alpaca import common
+
+        monkeypatch.delenv('ALPACA_API_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_SECRET_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_PAPER_API_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_PAPER_SECRET_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_LIVE_API_KEY', raising=False)
+        monkeypatch.delenv('ALPACA_LIVE_SECRET_KEY', raising=False)
+
+        with patch('tradingagents.dataflows.alpaca.common.get_config') as mock_config:
+            mock_config.return_value = {
+                "alpaca_paper_api_key": "cfg_paper",
+                "alpaca_paper_secret_key": "cfg_secret",
+                "alpaca_live_api_key": None,
+                "alpaca_live_secret_key": None,
+            }
+            api_key, secret = common.get_alpaca_credentials()
+
+        assert api_key == "cfg_paper"
+        assert secret == "cfg_secret"
+
     def test_both_credentials_missing_raises_error(self):
         """Test that both missing credentials raises error."""
         from tradingagents.dataflows.alpaca.common import get_alpaca_credentials

@@ -12,6 +12,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from tradingagents.dataflows.config import get_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,15 +45,35 @@ def get_alpaca_credentials() -> tuple[str, str]:
     Raises:
         ValueError: If credentials are not set
     """
-    api_key = os.getenv("ALPACA_API_KEY")
-    secret_key = os.getenv("ALPACA_SECRET_KEY")
+    credential_pairs = [
+        ("ALPACA_API_KEY", "ALPACA_SECRET_KEY"),
+        ("ALPACA_PAPER_API_KEY", "ALPACA_PAPER_SECRET_KEY"),
+        ("ALPACA_LIVE_API_KEY", "ALPACA_LIVE_SECRET_KEY"),
+    ]
 
-    if not api_key:
-        raise ValueError("ALPACA_API_KEY environment variable is not set.")
-    if not secret_key:
-        raise ValueError("ALPACA_SECRET_KEY environment variable is not set.")
+    for api_key_name, secret_key_name in credential_pairs:
+        api_key = os.getenv(api_key_name)
+        secret_key = os.getenv(secret_key_name)
+        if api_key and secret_key:
+            return api_key, secret_key
 
-    return api_key, secret_key
+    # Fall back to configuration values (paper preferred)
+    config = get_config()
+    config_pairs = [
+        ("alpaca_paper_api_key", "alpaca_paper_secret_key"),
+        ("alpaca_live_api_key", "alpaca_live_secret_key"),
+    ]
+
+    for api_key_name, secret_key_name in config_pairs:
+        api_key = config.get(api_key_name)
+        secret_key = config.get(secret_key_name)
+        if api_key and secret_key:
+            return api_key, secret_key
+
+    raise ValueError(
+        "Alpaca credentials not set. Please define ALPACA_API_KEY/ALPACA_SECRET_KEY "
+        "or the paper/live variables in your environment or configuration."
+    )
 
 
 class AlpacaDataClient:

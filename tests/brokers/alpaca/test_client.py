@@ -7,6 +7,12 @@ from unittest.mock import patch, MagicMock
 class TestAlpacaClient:
     """Test Alpaca trading client initialization and configuration."""
 
+    def test_default_config_disables_auto_execution(self):
+        """Ensure triple-layer safety keeps auto_execute_trades False by default."""
+        from tradingagents.default_config import DEFAULT_CONFIG
+
+        assert DEFAULT_CONFIG["auto_execute_trades"] is False
+
     def test_get_trading_client_paper_mode(self):
         """Test getting paper trading client."""
         # Must patch where it's used, not where it's defined

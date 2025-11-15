@@ -5,8 +5,16 @@ retrieving account information via the Alpaca API.
 """
 
 from typing import Optional
-from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest
+from alpaca.trading.requests import (
+    LimitOrderRequest,
+    MarketOrderRequest,
+    StopLimitOrderRequest,
+    StopOrderRequest,
+    TrailingStopOrderRequest,
+)
 from alpaca.trading.enums import OrderSide, TimeInForce
+
+from tradingagents.dataflows.config import get_config
 
 from .client import get_trading_client
 
@@ -17,6 +25,10 @@ def place_order(
     side: str,
     order_type: str = "market",
     limit_price: Optional[float] = None,
+    stop_price: Optional[float] = None,
+    trail_price: Optional[float] = None,
+    trail_percent: Optional[float] = None,
+    time_in_force: str = "day",
     **kwargs
 ) -> str:
     """Place an order via Alpaca.
@@ -25,8 +37,12 @@ def place_order(
         symbol: Stock symbol (e.g., "AAPL")
         qty: Quantity to trade (supports fractional shares)
         side: Order side - "buy" or "sell"
-        order_type: Order type - "market" or "limit"
-        limit_price: Limit price for limit orders (required for limit orders)
+        order_type: Order type - market, limit, stop, stop_limit, trailing_stop
+        limit_price: Limit price for limit and stop_limit orders
+        stop_price: Stop trigger price for stop or stop_limit orders
+        trail_price: Trailing stop price (dollar based)
+        trail_percent: Trailing stop percentage
+        time_in_force: Time in force (DAY, GTC, OPG, CLS, IOC, FOK)
         **kwargs: Additional order parameters (currently unused, for future expansion)
 
     Returns:
@@ -45,8 +61,6 @@ def place_order(
         >>> place_order("TSLA", 5, "sell", order_type="limit", limit_price=250.50)
         "Order placed: TSLA sell 5 @ limit (ID: def456)"
     """
-    from tradingagents.dataflows.config import get_config
-
     config = get_config()
 
     # Determine paper/live mode from configuration
@@ -62,29 +76,67 @@ def place_order(
     # Convert side to Alpaca enum
     order_side = OrderSide.BUY if side == "buy" else OrderSide.SELL
 
+    tif = _parse_time_in_force(time_in_force)
+
     # Create order request based on type
+    order_type = order_type.lower()
     if order_type == "market":
         order_data = MarketOrderRequest(
             symbol=symbol,
             qty=qty,
             side=order_side,
-            time_in_force=TimeInForce.DAY
+            time_in_force=tif
         )
     elif order_type == "limit":
-        if not limit_price:
+        if limit_price is None:
             raise ValueError("limit_price required for limit orders")
 
         order_data = LimitOrderRequest(
             symbol=symbol,
             qty=qty,
             side=order_side,
-            time_in_force=TimeInForce.DAY,
+            time_in_force=tif,
             limit_price=limit_price
+        )
+    elif order_type == "stop":
+        if stop_price is None:
+            raise ValueError("stop_price required for stop orders")
+
+        order_data = StopOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=order_side,
+            stop_price=stop_price,
+            time_in_force=tif,
+        )
+    elif order_type == "stop_limit":
+        if stop_price is None or limit_price is None:
+            raise ValueError("stop_limit orders require both stop_price and limit_price")
+
+        order_data = StopLimitOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=order_side,
+            limit_price=limit_price,
+            stop_price=stop_price,
+            time_in_force=tif,
+        )
+    elif order_type == "trailing_stop":
+        if trail_price is None and trail_percent is None:
+            raise ValueError("trailing_stop orders require trail_price or trail_percent")
+
+        order_data = TrailingStopOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=order_side,
+            time_in_force=tif,
+            trail_price=trail_price,
+            trail_percent=trail_percent,
         )
     else:
         raise ValueError(
             f"Unsupported order_type: {order_type}. "
-            f"Supported types: market, limit"
+            f"Supported types: market, limit, stop, stop_limit, trailing_stop"
         )
 
     # Submit order to Alpaca
@@ -114,8 +166,6 @@ def get_positions() -> str:
         >>> get_positions()
         "No open positions"
     """
-    from tradingagents.dataflows.config import get_config
-
     config = get_config()
     paper_mode = config.get("broker_mode", "paper") == "paper"
     client = get_trading_client(paper=paper_mode)
@@ -149,18 +199,19 @@ def get_account() -> str:
         Buying Power: $20000.00
         Status: ACTIVE"
     """
-    from tradingagents.dataflows.config import get_config
-
     config = get_config()
     paper_mode = config.get("broker_mode", "paper") == "paper"
     client = get_trading_client(paper=paper_mode)
 
     account = client.get_account()
 
+    def _format_money(value):
+        return f"{float(value):,.2f}"
+
     return f"""Account Summary:
-Cash: ${account.cash}
-Equity: ${account.equity}
-Buying Power: ${account.buying_power}
+Cash: ${_format_money(account.cash)}
+Equity: ${_format_money(account.equity)}
+Buying Power: ${_format_money(account.buying_power)}
 Status: {account.status}
 """
 
@@ -178,11 +229,28 @@ def cancel_order(order_id: str) -> str:
         >>> cancel_order("abc123")
         "Order abc123 cancelled"
     """
-    from tradingagents.dataflows.config import get_config
-
     config = get_config()
     paper_mode = config.get("broker_mode", "paper") == "paper"
     client = get_trading_client(paper=paper_mode)
 
     client.cancel_order_by_id(order_id)
     return f"Order {order_id} cancelled"
+
+
+def _parse_time_in_force(value: Optional[str]) -> TimeInForce:
+    """Normalize time-in-force strings to Alpaca enums."""
+    mapping = {
+        "DAY": TimeInForce.DAY,
+        "GTC": TimeInForce.GTC,
+        "OPG": TimeInForce.OPG,
+        "CLS": TimeInForce.CLS,
+        "IOC": TimeInForce.IOC,
+        "FOK": TimeInForce.FOK,
+    }
+    key = (value or "day").upper()
+    if key not in mapping:
+        raise ValueError(
+            f"Unsupported time_in_force '{value}'. "
+            f"Supported: {', '.join(mapping.keys())}"
+        )
+    return mapping[key]

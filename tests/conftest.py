@@ -8,12 +8,19 @@ This file provides:
 - Markers for test organization
 """
 
-import pytest
 import os
 import json
+import sys
 from pathlib import Path
 from unittest.mock import Mock, MagicMock
 from typing import Dict, Any
+
+import pytest
+
+# Ensure project root is importable when running individual tests
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ============================================================================

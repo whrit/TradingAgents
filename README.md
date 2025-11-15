@@ -157,6 +157,8 @@ An interface will appear showing results as they load, letting you track the age
 
 We built TradingAgents with LangGraph to ensure flexibility and modularity. We utilize `o1-preview` and `gpt-4o` as our deep thinking and fast thinking LLMs for our experiments. However, for testing purposes, we recommend you use `o4-mini` and `gpt-4.1-mini` to save on costs as our framework makes **lots of** API calls.
 
+By default the graph only produces a recommendation, but when you set `auto_execute_trades: True` (and provide broker credentials) the final BUY/SELL decision will be routed through `tradingagents.brokers.interface`. Use the companion configuration keys `default_trade_quantity`, `default_order_type`, and `default_time_in_force` to control how those automated orders are submitted.
+
 ### Python Usage
 
 To use TradingAgents inside your code, you can import the `tradingagents` module and initialize a `TradingAgentsGraph()` object. The `.propagate()` function will return a decision. You can run `main.py`, here's also a quick example:

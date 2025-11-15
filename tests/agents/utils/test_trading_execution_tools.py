@@ -1,44 +1,109 @@
-"""
-TDD Tests for Trading Execution Tools.
+"""Tests for TradingAgents trading execution LangChain tools."""
 
-SPECIFICATION (Tests Define Implementation):
-============================================
-The trading execution tools MUST:
-1. Be decorated as LangChain tools
-2. execute_trade(symbol, quantity, action, order_type) -> str
-3. get_portfolio_positions() -> str
-4. get_account_balance() -> str
-5. Route to broker interface layer
-6. Validate parameters before execution
-7. Return formatted strings for agent consumption
-"""
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+
+from tradingagents.agents.utils.trading_execution_tools import (
+    execute_trade,
+    get_portfolio_positions,
+    get_account_balance,
+)
 
 
 class TestExecuteTradeTool:
-    """
-    TDD: Test execute_trade tool function.
+    """Validate execute_trade metadata and routing."""
 
-    SPECIFICATION:
-    - Must be a LangChain tool (has .name, .description attributes)
-    - execute_trade(symbol, quantity, action, order_type='market') -> str
-    - action: 'buy' or 'sell'
-    - Routes to broker.interface.route_to_broker
-    - Returns confirmation string
-    """
+    def test_metadata_exposes_langchain_schema(self):
+        assert execute_trade.name == "execute_trade"
+        assert "symbol" in execute_trade.args
+        assert execute_trade.description
 
-    @pytest.mark.skip(reason="Trading tools not yet implemented - TDD placeholder")
-    def test_execute_trade_tool_exists(self):
-        """Test that execute_trade tool exists."""
-        from tradingagents.agents.utils.trading_execution_tools import execute_trade
-        assert callable(execute_trade)
+    def test_execute_trade_routes_market_orders(self):
+        with patch(
+            "tradingagents.agents.utils.trading_execution_tools.route_to_broker",
+            create=True,
+        ) as mock_route:
+            mock_route.return_value = "Order placed"
+            payload = {
+                "symbol": "AAPL",
+                "quantity": 2,
+                "action": "buy",
+                "order_type": "market",
+            }
+
+            result = execute_trade.invoke(payload)
+
+        assert result == "Order placed"
+        mock_route.assert_called_once_with(
+            "place_order",
+            "AAPL",
+            2,
+            "buy",
+            "market",
+            limit_price=None,
+            stop_price=None,
+            trail_price=None,
+            trail_percent=None,
+            time_in_force="day",
+        )
+
+    def test_execute_trade_passes_limit_price(self):
+        with patch(
+            "tradingagents.agents.utils.trading_execution_tools.route_to_broker",
+            create=True,
+        ) as mock_route:
+            payload = {
+                "symbol": "TSLA",
+                "quantity": 5,
+                "action": "sell",
+                "order_type": "limit",
+                "limit_price": 250.5,
+            }
+            execute_trade.invoke(payload)
+
+        mock_route.assert_called_once_with(
+            "place_order",
+            "TSLA",
+            5,
+            "sell",
+            "limit",
+            limit_price=250.5,
+            stop_price=None,
+            trail_price=None,
+            trail_percent=None,
+            time_in_force="day",
+        )
 
 
-# Test markers
+class TestPortfolioTools:
+    """Ensure read-only portfolio/account tools call the broker interface."""
+
+    def test_get_portfolio_positions_routes(self):
+        with patch(
+            "tradingagents.agents.utils.trading_execution_tools.route_to_broker",
+            create=True,
+        ) as mock_route:
+            mock_route.return_value = "positions"
+            result = get_portfolio_positions.invoke({})
+
+        assert result == "positions"
+        mock_route.assert_called_once_with("get_positions")
+
+    def test_get_account_balance_routes(self):
+        with patch(
+            "tradingagents.agents.utils.trading_execution_tools.route_to_broker",
+            create=True,
+        ) as mock_route:
+            mock_route.return_value = "account"
+            result = get_account_balance.invoke({})
+
+        assert result == "account"
+        mock_route.assert_called_once_with("get_account")
+
+
 pytestmark = [
     pytest.mark.agents,
     pytest.mark.tools,
-    pytest.mark.unit
+    pytest.mark.unit,
 ]
