@@ -33,7 +33,7 @@ DEFAULT_CONFIG = {
     # Broker configuration for trade execution
     "trading_broker": "alpaca",  # Currently only "alpaca" is supported
     "broker_mode": "paper",      # "paper" for paper trading, "live" for live trading
-    "auto_execute_trades": False,  # Explicit opt-in before any automated execution
+    "auto_execute_trades": True,  # Explicit opt-in before any automated execution
     "default_trade_quantity": 1,   # Shares to trade when automation is enabled
     "default_order_type": "market",
     "default_time_in_force": "day",
