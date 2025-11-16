@@ -1,11 +1,61 @@
+import json
 from datetime import datetime
-from .alpha_vantage_common import _make_api_request, _filter_csv_by_date_range
+from typing import Dict
 
-def get_stock(
-    symbol: str,
-    start_date: str,
-    end_date: str
-) -> str:
+import pandas as pd
+
+from .alpha_vantage_common import _make_api_request
+
+_STOCK_CACHE: Dict[str, pd.DataFrame] = {}
+
+
+def _fetch_symbol_timeseries(symbol: str) -> pd.DataFrame:
+    """Fetch and cache the full daily time series for a symbol."""
+    normalized = symbol.upper()
+    if normalized in _STOCK_CACHE:
+        return _STOCK_CACHE[normalized]
+
+    params = {
+        "symbol": normalized,
+        "outputsize": "full",
+    }
+    response = _make_api_request("TIME_SERIES_DAILY_ADJUSTED", params)
+    payload = json.loads(response)
+    series_key = next(
+        (key for key in payload.keys() if "Time Series" in key),
+        None,
+    )
+    if not series_key or series_key not in payload:
+        raise ValueError(f"Alpha Vantage response missing time series for {symbol}")
+
+    series = payload[series_key]
+    records = []
+    for date_str, values in series.items():
+        records.append(
+            {
+                "date": datetime.strptime(date_str, "%Y-%m-%d"),
+                "open": float(values["1. open"]),
+                "high": float(values["2. high"]),
+                "low": float(values["3. low"]),
+                "close": float(values["4. close"]),
+                "adjusted_close": float(values["5. adjusted close"]),
+                "volume": int(values["6. volume"]),
+                "dividend_amount": float(values.get("7. dividend amount", 0.0)),
+                "split_coefficient": float(values.get("8. split coefficient", 1.0)),
+            }
+        )
+
+    df = pd.DataFrame(records).sort_values("date").reset_index(drop=True)
+    _STOCK_CACHE[normalized] = df
+    return df
+
+
+def _filter_dataframe_by_date_range(df: pd.DataFrame, start_dt: datetime, end_dt: datetime) -> pd.DataFrame:
+    mask = (df["date"] >= start_dt) & (df["date"] <= end_dt)
+    return df.loc[mask].copy()
+
+
+def get_stock(symbol: str, start_date: str, end_date: str) -> str:
     """
     Returns raw daily OHLCV values, adjusted close values, and historical split/dividend events
     filtered to the specified date range.
@@ -18,21 +68,15 @@ def get_stock(
     Returns:
         CSV string containing the daily adjusted time series data filtered to the date range.
     """
-    # Parse dates to determine the range
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    today = datetime.now()
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    if end_dt < start_dt:
+        raise ValueError("end_date must be on or after start_date.")
 
-    # Choose outputsize based on whether the requested range is within the latest 100 days
-    # Compact returns latest 100 data points, so check if start_date is recent enough
-    days_from_today_to_start = (today - start_dt).days
-    outputsize = "compact" if days_from_today_to_start < 100 else "full"
+    df = _fetch_symbol_timeseries(symbol)
+    filtered = _filter_dataframe_by_date_range(df, start_dt, end_dt)
+    if filtered.empty:
+        return ""
 
-    params = {
-        "symbol": symbol,
-        "outputsize": outputsize,
-        "datatype": "csv",
-    }
-
-    response = _make_api_request("TIME_SERIES_DAILY_ADJUSTED", params)
-
-    return _filter_csv_by_date_range(response, start_date, end_date)
+    filtered = filtered.assign(date=filtered["date"].dt.strftime("%Y-%m-%d"))
+    return filtered.to_csv(index=False)

@@ -112,13 +112,28 @@ class CostTracker:
     def _calculate_cost(
         self, model_name: str, input_tokens: int, output_tokens: int
     ) -> float:
-        pricing = self.pricing_config.get(model_name, {})
+        pricing = self._get_pricing_entry(model_name)
         input_rate = pricing.get("input_cost_per_1k_tokens", 0.0)
         output_rate = pricing.get("output_cost_per_1k_tokens", 0.0)
 
         return (input_tokens / 1000.0) * input_rate + (
             output_tokens / 1000.0
         ) * output_rate
+
+    def _get_pricing_entry(self, model_name: str) -> Dict[str, float]:
+        if model_name in self.pricing_config:
+            return self.pricing_config[model_name]
+
+        normalized = model_name.lower()
+        best_key = None
+        for key in self.pricing_config:
+            key_lower = key.lower()
+            if normalized.startswith(key_lower):
+                if best_key is None or len(key_lower) > len(best_key):
+                    best_key = key
+        if best_key:
+            return self.pricing_config[best_key]
+        return {}
 
 
 class CostTrackingMixin:

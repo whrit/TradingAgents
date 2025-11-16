@@ -273,3 +273,46 @@ def select_llm_provider() -> tuple[str, str]:
     print(f"You selected: {display_name}\tURL: {url}")
     
     return display_name, url
+
+
+def select_trade_size_multiplier() -> float:
+    """Prompt for a trade size multiplier."""
+    answer = questionary.text(
+        "Enter a trade size multiplier (e.g., 1 = default size, 2 = double size):",
+        default="1",
+        validate=lambda x: (
+            _validate_positive_float(x) or "Please enter a positive number."
+        ),
+    ).ask()
+
+    if answer is None:
+        console.print("\n[red]No trade size multiplier provided. Exiting...[/red]")
+        exit(1)
+
+    return float(answer.strip())
+
+
+def _validate_positive_float(value: str) -> bool:
+    try:
+        return float(value.strip()) > 0
+    except Exception:
+        return False
+
+
+def select_instrument_type() -> str:
+    """Select whether trades should target shares or derivatives."""
+    options = [
+        ("Traditional Shares (default)", "shares"),
+        ("Options / Futures / Derivatives (manual execution)", "derivatives"),
+    ]
+    choice = questionary.select(
+        "Select Your [Trading Instrument]:",
+        choices=[questionary.Choice(label, value=value) for label, value in options],
+        instruction="\n- Use arrow keys to navigate\n- Press Enter to select",
+    ).ask()
+
+    if choice is None:
+        console.print("\n[red]No instrument type selected. Exiting...[/red]")
+        exit(1)
+
+    return choice

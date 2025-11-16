@@ -332,19 +332,33 @@ class TradingAgentsGraph:
         if normalized not in {"BUY", "SELL"}:
             return None
 
+        base_qty = self.config.get("default_trade_quantity", 1)
+        multiplier = self.config.get("trade_size_multiplier", 1.0)
+        quantity = base_qty * multiplier
+
         instruction = {
             "symbol": symbol,
             "action": "buy" if normalized == "BUY" else "sell",
-            "quantity": self.config.get("default_trade_quantity", 1),
+            "quantity": quantity,
             "order_type": self.config.get("default_order_type", "market"),
             "time_in_force": self.config.get("default_time_in_force", "day"),
             "limit_price": self.config.get("default_limit_price"),
+            "instrument_type": self.config.get("trade_instrument_type", "shares"),
         }
         return instruction
 
     def _maybe_execute_trade(self, instruction: Optional[Dict[str, Any]]):
         """Execute the final trade decision if automation is enabled."""
         if not instruction or not self.config.get("auto_execute_trades"):
+            return None
+
+        instrument = instruction.get(
+            "instrument_type", self.config.get("trade_instrument_type", "shares")
+        )
+        if instrument != "shares":
+            logger.info(
+                "Skipping auto execution for non-share instrument type: %s", instrument
+            )
             return None
 
         try:

@@ -19,6 +19,7 @@ from .alpha_vantage_news import get_global_news as get_alpha_vantage_global_news
 from .alpha_vantage_common import AlphaVantageRateLimitError, AlphaVantagePremiumError
 from .alpaca import get_stock_data as get_alpaca_stock_data
 from .alpaca.common import AlpacaRateLimitError
+from .options import get_options_chain
 
 # Configuration and routing logic
 from .config import get_config
@@ -54,7 +55,13 @@ TOOLS_CATEGORIES = {
             "get_insider_sentiment",
             "get_insider_transactions",
         ]
-    }
+    },
+    "options_data": {
+        "description": "Options and derivatives snapshots",
+        "tools": [
+            "get_options_data",
+        ],
+    },
 }
 
 VENDOR_LIST = [
@@ -63,7 +70,8 @@ VENDOR_LIST = [
     "alpaca",
     "alpha_vantage",
     "openai",
-    "google"
+    "google",
+    "options",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -120,6 +128,10 @@ VENDOR_METHODS = {
         "alpha_vantage": get_alpha_vantage_insider_transactions,
         "yfinance": get_yfinance_insider_transactions,
         "local": get_finnhub_company_insider_transactions,
+    },
+    # options_data
+    "get_options_data": {
+        "yfinance": get_options_chain,
     },
 }
 

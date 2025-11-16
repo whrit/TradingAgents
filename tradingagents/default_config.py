@@ -38,6 +38,7 @@ DEFAULT_CONFIG = {
         "technical_indicators": "alpha_vantage",  # Options: yfinance, alpha_vantage, local
         "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
         "news_data": "alpha_vantage",        # Options: openai, alpha_vantage, google, local
+        "options_data": "yfinance",          # Options: yfinance
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {
@@ -52,6 +53,8 @@ DEFAULT_CONFIG = {
     "default_order_type": "market",
     "default_time_in_force": "day",
     "default_limit_price": None,
+    "trade_size_multiplier": float(os.getenv("TRADE_SIZE_MULTIPLIER", "1.0")),
+    "trade_instrument_type": os.getenv("TRADE_INSTRUMENT_TYPE", "shares"),
     "restricted_tickers": [],
     "max_position_size": 1000,
     # Risk engine defaults

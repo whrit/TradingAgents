@@ -1,5 +1,6 @@
 from typing import Optional
 from tradingagents.dataflows.config import get_config
+from tradingagents.dataflows.interface import route_to_vendor
 
 
 def create_execution_strategist(llm):
@@ -19,22 +20,41 @@ def create_execution_strategist(llm):
             action = "sell"
 
         instruction = None
+        trade_multiplier = float(config.get("trade_size_multiplier", 1.0))
+        instrument_type = config.get("trade_instrument_type", "shares")
+
         if action:
             instruction = {
                 "symbol": ticker,
                 "action": action,
-                "quantity": config.get("default_trade_quantity", 1),
+                "quantity": config.get("default_trade_quantity", 1) * trade_multiplier,
                 "order_type": config.get("default_order_type", "market"),
                 "time_in_force": config.get("default_time_in_force", "day"),
                 "limit_price": config.get("default_limit_price"),
+                "instrument_type": instrument_type,
             }
+
+        options_context = ""
+        if instrument_type != "shares":
+            try:
+                options_snapshot = route_to_vendor(
+                    "get_options_data",
+                    ticker,
+                    None,
+                    5,
+                )
+            except Exception as exc:
+                options_snapshot = f"Unavailable (error: {exc})"
+            options_context = f"\nOptions Snapshot:\n{options_snapshot}\n"
 
         context = (
             f"Ticker: {ticker}\n"
             f"Trader Plan:\n{trader_plan}\n\n"
             f"Risk Guidance:\n{risk_summary}\n\n"
             f"Risk Metrics JSON:\n{risk_metrics_json}\n\n"
+            f"Instrument Type: {instrument_type}\n"
             f"Proposed Instruction: {instruction or 'No trade (likely HOLD)'}"
+            f"{options_context}"
         )
 
         prompt = f"""

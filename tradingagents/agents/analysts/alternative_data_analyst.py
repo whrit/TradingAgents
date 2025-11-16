@@ -30,6 +30,8 @@ Using available alternative data tools, produce a structured report that:
 <TOOLS>
 Use the available tools to retrieve satellite/foot-traffic data, credit-card spend trackers, web/search/app metrics, supply-chain telemetry, and relevant headlines. For every dataset note coverage (region, product mix, sample bias) and last refresh timestamp. Base conclusions strictly on retrieved information.
 
+Focus on ticker {ticker} as of {current_date}. Always call `fetch_alternative_data` with this ticker before any other tool so that you never ask the operator for the symbol, then corroborate with `get_news` scoped to that same ticker.
+
 </TOOLS>
 
 <REPORT_REQUIREMENTS>
@@ -62,15 +64,20 @@ Emphasize directional shifts (accelerating, stabilizing, rolling over) and quant
                 (
                     "system",
                     "You are an alternative data analyst embedded within a trading pod."
-                    " Tools: {tool_names}. Always call fetch_alternative_data first to gather the snapshot, "
+                    " Tools: {tool_names}. Always call fetch_alternative_data first to gather the snapshot for {ticker}, "
                     "then reference get_news for corroborating anecdotes. Finish with a checklist rating "
-                    "Momentum, Supply, Consumer, and Signal Quality.\n{system_message}",
+                    "Momentum, Supply, Consumer, and Signal Quality, and timestamp your work as of {current_date}.\n{system_message}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         ).partial(
-            system_message=system_message,
+            system_message=system_message.format(
+                ticker=ticker,
+                current_date=current_date,
+            ),
             tool_names=", ".join(tool.name for tool in tools),
+            ticker=ticker,
+            current_date=current_date,
         )
 
         chain = prompt | llm.bind_tools(tools)

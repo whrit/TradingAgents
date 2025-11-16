@@ -77,3 +77,23 @@ def test_cost_tracker_reset_clears_prior_stats():
     assert summary_after_reset["total_cost"] == 0
     assert summary_after_reset["models"] == {}
     assert summary_after_reset["sections"] == {}
+
+
+def test_cost_tracker_matches_versioned_model_names():
+    tracker = CostTracker(
+        {
+            "gpt-5-mini": {
+                "input_cost_per_1k_tokens": 0.01,
+                "output_cost_per_1k_tokens": 0.02,
+            }
+        }
+    )
+
+    tracker.record_usage(
+        "gpt-5-mini-2025-08-07",
+        input_tokens=1000,
+        output_tokens=500,
+    )
+
+    summary = tracker.summary()
+    assert summary["total_cost"] == pytest.approx(0.02, rel=1e-5)

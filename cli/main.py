@@ -1,5 +1,6 @@
 from typing import Optional
 import datetime
+import json
 import typer
 from pathlib import Path
 from functools import wraps
@@ -96,6 +97,8 @@ class MessageBuffer:
             "account": None,
             "market": None,
             "market_error": None,
+            "trade_size_multiplier": 1.0,
+            "instrument_type": "shares",
         }
 
     def add_message(self, message_type, content):
@@ -136,6 +139,10 @@ class MessageBuffer:
     def update_market_snapshot(self, snapshot):
         self.live_metrics["market"] = snapshot.get("market")
         self.live_metrics["market_error"] = snapshot.get("error")
+
+    def set_trade_preferences(self, multiplier: float, instrument: str):
+        self.live_metrics["trade_size_multiplier"] = multiplier
+        self.live_metrics["instrument_type"] = instrument
 
     def _update_current_report(self):
         # For the panel display, only show the most recently updated section
@@ -272,6 +279,11 @@ def render_live_cost_panel():
     currency = (summary or {}).get("currency", "USD")
     table = Table(box=box.SIMPLE_HEAD, show_header=False, expand=True)
     table.add_row(f"Currency: [bold]{currency}[/bold]")
+    trade_mult = message_buffer.live_metrics.get("trade_size_multiplier", 1.0)
+    instrument = message_buffer.live_metrics.get("instrument_type") or "shares"
+    instrument_label = instrument.replace("_", " ").title()
+    table.add_row(f"Trade Size: x{trade_mult}")
+    table.add_row(f"Instrument: {instrument_label}")
     if summary:
         total = summary.get("total_cost", 0.0)
         calls = summary.get("total_calls", 0)
@@ -392,6 +404,93 @@ def render_market_panel():
         table.add_row(error)
 
     return Panel(table, title="Market Movement", border_style="magenta", padding=(1, 1))
+
+
+def _make_bar(value: float, max_value: float, width: int = 20) -> str:
+    if max_value <= 0:
+        return ""
+    ratio = min(1.0, max(0.0, value / max_value))
+    blocks = max(1, int(ratio * width))
+    return "▇" * blocks
+
+
+def render_risk_visuals(final_state):
+    metrics_blob = final_state.get("risk_metrics_json")
+    if not metrics_blob:
+        return None
+    if isinstance(metrics_blob, str):
+        try:
+            metrics = json.loads(metrics_blob)
+        except json.JSONDecodeError:
+            return None
+    elif isinstance(metrics_blob, dict):
+        metrics = metrics_blob
+    else:
+        return None
+
+    var_table = Table(title="Value at Risk", box=box.SIMPLE_HEAD, expand=True)
+    var_table.add_column("Type")
+    var_table.add_column("VaR (%)", justify="right")
+    var_table.add_column("ES (%)", justify="right")
+    hist = metrics.get("var", {}).get("historical", {})
+    for cl, stats in hist.items():
+        var_table.add_row(
+            f"Hist {cl}",
+            f"{stats.get('value', 0)*100:.2f}",
+            f"{stats.get('expected_shortfall', 0)*100:.2f}",
+        )
+    param = metrics.get("var", {}).get("parametric", {})
+    for cl, stats in param.items():
+        var_table.add_row(
+            f"Param {cl}",
+            f"{stats.get('value', 0)*100:.2f}",
+            "—",
+        )
+
+    stress_table = Table(title="Stress Tests", box=box.SIMPLE_HEAD, expand=True)
+    stress_table.add_column("Scenario")
+    stress_table.add_column("Impact", justify="right")
+    for key, value in (metrics.get("stress") or {}).items():
+        label = key.replace("_", " ").title()
+        if key.endswith("_pct"):
+            impact = f"{value*100:.1f}%"
+        elif "cost" in key:
+            impact = f"${value:,.0f}"
+        else:
+            impact = f"{value:.1f}"
+        stress_table.add_row(label, impact)
+
+    sizing_table = Table(title="Position Sizing", box=box.SIMPLE_HEAD, expand=True)
+    sizing_table.add_column("Metric")
+    sizing_table.add_column("Value", justify="right")
+    sizing_table.add_column("Visual")
+    sizing = metrics.get("position_sizing") or {}
+    max_sizing = max(sizing.values()) if sizing else 0
+    for key, value in sizing.items():
+        label = key.replace("_", " ").title()
+        sizing_table.add_row(label, f"${value:,.0f}", _make_bar(value, max_sizing))
+
+    limits_table = Table(title="Risk Limits", box=box.SIMPLE_HEAD, expand=True)
+    limits_table.add_column("Metric")
+    limits_table.add_column("Current", justify="right")
+    limits_table.add_column("Limit", justify="right")
+    limits_table.add_column("Status")
+    for row in metrics.get("risk_limits", []):
+        status = row.get("status", "OK")
+        color = {"OK": "green", "WARNING": "yellow", "BREACH": "red"}.get(status, "white")
+        limits_table.add_row(
+            row.get("metric", "—"),
+            f"{row.get('current', 0):.3f}",
+            f"{row.get('limit', 0):.3f}",
+            f"[{color}]{status}[/{color}]",
+        )
+
+    visuals = Columns(
+        [var_table, stress_table, sizing_table, limits_table],
+        equal=True,
+        expand=True,
+    )
+    return Panel(visuals, title="VIII. Risk Visuals", border_style="cyan", padding=(1, 1))
 
 
 def fetch_positions_snapshot():
@@ -802,6 +901,22 @@ def get_user_selections():
     selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
     selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
 
+    console.print(
+        create_question_box(
+            "Step 7: Trade Sizing",
+            "Enter a multiplier to scale the default trade quantity (e.g., 1 = default, 2 = double).",
+        )
+    )
+    trade_multiplier = select_trade_size_multiplier()
+
+    console.print(
+        create_question_box(
+            "Step 8: Instrument Preference",
+            "Choose whether the Execution Strategist should target traditional shares or derivatives.",
+        )
+    )
+    instrument_choice = select_instrument_type()
+
     return {
         "ticker": selected_ticker,
         "analysis_date": analysis_date,
@@ -811,6 +926,8 @@ def get_user_selections():
         "backend_url": backend_url,
         "shallow_thinker": selected_shallow_thinker,
         "deep_thinker": selected_deep_thinker,
+        "trade_size_multiplier": trade_multiplier,
+        "instrument_type": instrument_choice,
     }
 
 
@@ -1145,6 +1262,10 @@ def display_complete_report(final_state):
             )
         )
 
+    risk_panel = render_risk_visuals(final_state)
+    if risk_panel:
+        console.print(risk_panel)
+
 
 def prompt_trade_execution(final_state, config):
     trade = final_state.get("proposed_trade")
@@ -1162,17 +1283,27 @@ def prompt_trade_execution(final_state, config):
         console.print("[green]Trade already auto-executed per configuration.[/green]")
         return
 
+    instrument = config.get("trade_instrument_type", "shares")
+    instrument_label = instrument.replace("_", " ").title()
+    multiplier = config.get("trade_size_multiplier", 1.0)
+
     console.print(
         Panel(
             f"Trader recommends to [bold]{trade['action'].upper()}[/bold] "
             f"{trade['quantity']} shares of {trade['symbol']} using "
             f"{trade.get('order_type','market').upper()} / "
-            f"{trade.get('time_in_force','day').upper()}.\n\n"
+            f"{trade.get('time_in_force','day').upper()}.\n"
+            f"Instrument preference: [bold]{instrument_label}[/bold] (size x{multiplier}).\n\n"
             f"Execution notes:\n{final_state.get('execution_plan','(none)')}",
             title="Proposed Trade",
             border_style="yellow",
         )
     )
+
+    if instrument != "shares":
+        console.print(
+            "[yellow]Note: Non-equity instruments require manual execution. Broker auto-routing is disabled for this selection.[/yellow]"
+        )
 
     if typer.confirm("Do you approve and want to route this trade?", default=False):
         try:
@@ -1225,6 +1356,9 @@ def run_analysis():
     # First get all user selections
     selections = get_user_selections()
     message_buffer.set_ticker(selections["ticker"])
+    message_buffer.set_trade_preferences(
+        selections["trade_size_multiplier"], selections["instrument_type"]
+    )
 
     # Create config with selected research depth
     config = DEFAULT_CONFIG.copy()
@@ -1234,6 +1368,8 @@ def run_analysis():
     config["deep_think_llm"] = selections["deep_thinker"]
     config["backend_url"] = selections["backend_url"]
     config["llm_provider"] = selections["llm_provider"].lower()
+    config["trade_size_multiplier"] = selections["trade_size_multiplier"]
+    config["trade_instrument_type"] = selections["instrument_type"]
 
     # Initialize the graph
     graph = TradingAgentsGraph(
@@ -1307,6 +1443,14 @@ def run_analysis():
         message_buffer.add_message(
             "System",
             f"Selected analysts: {', '.join(analyst.value for analyst in selections['analysts'])}",
+        )
+        message_buffer.add_message(
+            "System",
+            f"Trade size multiplier: x{selections['trade_size_multiplier']}",
+        )
+        message_buffer.add_message(
+            "System",
+            f"Instrument preference: {selections['instrument_type'].replace('_',' ').title()}",
         )
         update_display(layout)
 
