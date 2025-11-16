@@ -1,19 +1,35 @@
+import json
 from unittest.mock import patch
 
 from tradingagents.agents.utils import risk_tools
 
 
-SAMPLE_CSV = """Date,Open,High,Low,Close,Volume
-2024-01-01,100,101,99,100,1000
-2024-01-02,100,102,99,101,1000
-2024-01-03,101,103,100,102,1000
-2024-01-04,102,104,101,103,1000
-2024-01-05,103,105,102,104,1000
-"""
+@patch("tradingagents.agents.utils.risk_tools.RiskEngine")
+def test_calculate_portfolio_risk_formats_dashboard(mock_engine):
+    mock_engine.return_value.generate.return_value = {
+        "meta": {
+            "ticker": "AAPL",
+            "end_date": "2024-01-05",
+            "lookback_days": 4,
+            "data_points": 4,
+        },
+        "var": {
+            "historical": {"0.95": {"value": -0.02, "expected_shortfall": -0.03, "confidence_interval": {"lower": -0.025, "upper": -0.015}}},
+            "parametric": {"0.95": {"value": -0.021, "confidence_interval": {"lower": -0.03, "upper": -0.01}}},
+        },
+        "stress": {
+            "market_crash_pct": -0.18,
+            "sector_rotation_pct": -0.09,
+            "vol_spike_cost": 4000,
+            "liquidity_days": 1.2,
+        },
+        "liquidity": {"adv_dollars": 1_200_000, "days_to_exit": 1.2},
+        "position_sizing": {"max_position": 200000, "optimal_position": 100000},
+        "risk_limits": [
+            {"metric": "VaR", "current": 0.02, "limit": 0.02, "status": "OK"},
+        ],
+    }
 
-
-@patch("tradingagents.agents.utils.risk_tools.route_to_vendor", return_value=SAMPLE_CSV)
-def test_calculate_portfolio_risk(mock_route):
     report = risk_tools.calculate_portfolio_risk.invoke(
         {
             "ticker": "AAPL",
@@ -22,6 +38,9 @@ def test_calculate_portfolio_risk(mock_route):
             "confidence": 0.95,
         }
     )
-    assert "Risk Snapshot" in report
-    assert "AAPL" in report
-    mock_route.assert_called_once()
+
+    assert "Risk Dashboard" in report
+    json_block = report.split("```json\n", 1)[1].split("```", 1)[0]
+    payload = json.loads(json_block)
+    assert payload["meta"]["ticker"] == "AAPL"
+    mock_engine.return_value.generate.assert_called_once()

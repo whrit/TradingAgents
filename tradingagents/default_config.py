@@ -44,6 +44,15 @@ DEFAULT_CONFIG = {
     "default_limit_price": None,
     "restricted_tickers": [],
     "max_position_size": 1000,
+    # Risk engine defaults
+    "risk_portfolio_value": float(os.getenv("RISK_PORTFOLIO_VALUE", "1000000")),
+    "risk_position_notional": float(os.getenv("RISK_POSITION_NOTIONAL", "100000")),
+    "risk_budget_pct": float(os.getenv("RISK_BUDGET_PCT", "0.02")),
+    "risk_benchmark": os.getenv("RISK_BENCHMARK", "SPY"),
+    "risk_sector_etf": os.getenv("RISK_SECTOR_ETF", ""),
+    "risk_lookback_days": int(os.getenv("RISK_LOOKBACK_DAYS", "120")),
+    "risk_primary_confidence": float(os.getenv("RISK_PRIMARY_CONFIDENCE", "0.95")),
+    "risk_secondary_confidence": float(os.getenv("RISK_SECONDARY_CONFIDENCE", "0.99")),
     # Alpaca credentials (loaded from environment variables)
     "alpaca_paper_api_key": os.getenv("ALPACA_PAPER_API_KEY"),
     "alpaca_paper_secret_key": os.getenv("ALPACA_PAPER_SECRET_KEY"),
