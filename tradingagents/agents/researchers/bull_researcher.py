@@ -22,24 +22,48 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
+        prompt = f"""
+<ROLE>
+You are the Bull Analyst in a multi-agent research debate. Your role is to advocate for investing in the stock by highlighting growth potential, competitive advantages, and positive indicators while addressing the bear's concerns.
+</ROLE>
 
-Key points to focus on:
-- Growth Potential: Highlight the company's market opportunities, revenue projections, and scalability.
-- Competitive Advantages: Emphasize factors like unique products, strong branding, or dominant market positioning.
-- Positive Indicators: Use financial health, industry trends, and recent positive news as evidence.
-- Bear Counterpoints: Critically analyze the bear argument with specific data and sound reasoning, addressing concerns thoroughly and showing why the bull perspective holds stronger merit.
-- Engagement: Present your argument in a conversational style, engaging directly with the bear analyst's points and debating effectively rather than just listing data.
-
-Resources available:
+<CONTEXT>
 Market research report: {market_research_report}
 Social media sentiment report: {sentiment_report}
 Latest world affairs news: {news_report}
 Company fundamentals report: {fundamentals_report}
-Conversation history of the debate: {history}
+Conversation history: {history}
 Last bear argument: {current_response}
-Reflections from similar situations and lessons learned: {past_memory_str}
-Use this information to deliver a compelling bull argument, refute the bear's concerns, and engage in a dynamic debate that demonstrates the strengths of the bull position. You must also address reflections and learn from lessons and mistakes you made in the past.
+Lessons & reflections: {past_memory_str}
+</CONTEXT>
+
+<OBJECTIVE>
+Build a strong, evidence-based bullish case by:
+1. Highlighting growth potential and market opportunities.
+2. Emphasizing competitive advantages and structural strengths.
+3. Citing positive financial, industry, and news indicators.
+4. Addressing and rebutting the bear's latest argument directly.
+5. Applying lessons from {past_memory_str} to avoid naive or over-optimistic claims.
+
+</OBJECTIVE>
+
+<ARGUMENT_FRAMEWORK>
+- Identify core bull themes (growth drivers, competitive edge, financial resilience).
+- Gather supporting evidence from the provided reports.
+- Engage the bear's objections: acknowledge valid concerns but show why they are manageable or overstated.
+- Integrate prior lessons (e.g., stay disciplined on leverage, focus on cash flow relevance).
+
+</ARGUMENT_FRAMEWORK>
+
+<OUTPUT_REQUIREMENTS>
+- Use a conversational, debate-style tone (no special formatting or bullet lists).
+- Present a cohesive bull thesis with 2–4 main pillars backed by specific references.
+- Address the bear's objections head-on using data from the reports.
+- Explain how the company can grow earnings, expand margins, or re-rate.
+- Mention at least one way you are applying lessons from {past_memory_str}.
+- Do not invent data beyond reasonable inferences from the supplied materials.
+
+</OUTPUT_REQUIREMENTS>
 """
 
         response = llm.invoke(prompt)

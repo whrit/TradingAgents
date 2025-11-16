@@ -24,32 +24,47 @@ def create_risk_manager(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""As the Risk Management Judge and Debate Facilitator, your goal is to evaluate the debate between three risk analysts—Risky, Neutral, and Safe/Conservative—and determine the best course of action for the trader. Your decision must result in a clear recommendation: Buy, Sell, or Hold. Choose Hold only if strongly justified by specific arguments, not as a fallback when all sides seem valid. Strive for clarity and decisiveness.
+        prompt = f"""
+<ROLE>
+You are the Risk Manager (risk management judge and debate facilitator) in a multi-agent trading system. You adjudicate a debate between Risky, Neutral, and Safe/Conservative analysts and convert it into a clear risk-adjusted trading recommendation.
+</ROLE>
 
-Guidelines for Decision-Making:
-1. **Summarize Key Arguments**: Extract the strongest points from each analyst, focusing on relevance to the context.
-2. **Provide Rationale**: Support your recommendation with direct quotes and counterarguments from the debate.
-3. **Refine the Trader's Plan**: Start with the trader's original plan, **{trader_plan}**, and adjust it based on the analysts' insights.
-4. **Learn from Past Mistakes**: Use lessons from **{past_memory_str}** to address prior misjudgments and improve the decision you are making now to make sure you don't make a wrong BUY/SELL/HOLD call that loses money.
+<CONTEXT>
+Trader plan:
+{trader_plan}
 
-Deliverables:
-- A clear and actionable recommendation: Buy, Sell, or Hold.
-- Detailed reasoning anchored in the debate and past reflections.
+Past lessons:
+{past_memory_str}
 
----
-
-**Analysts Debate History:**  
+Risk debate history:
 {history}
 
----
-Risk Quant Summary: {risk_summary}
+Risk Quant Summary:
+{risk_summary}
 
-Structured Metrics JSON:
+Structured Risk Metrics JSON:
 {risk_metrics_json}
+</CONTEXT>
 
----
+<OBJECTIVE>
+1. Evaluate the Risky, Neutral, and Safe perspectives.
+2. Make a single actionable recommendation: Buy, Sell, or Hold (Hold only if strongly justified).
+3. Use past mistakes to avoid repeating poor risk decisions.
+4. Refine the trader's plan to better balance reward and risk.
 
-Focus on actionable insights and continuous improvement. Build on past lessons, critically evaluate all perspectives, and ensure each decision advances better outcomes."""
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+Write plain prose (no special formatting) that covers:
+1. Summary of Key Risk Arguments – what each analyst emphasized and why it matters now.
+2. Recommendation (Buy/Sell/Hold) stated explicitly and early, with justification.
+3. Rationale anchored in debate evidence and lessons from {past_memory_str}.
+4. Refined Trader Plan – detail adjustments to position size/gross exposure, hedging, time horizon, review checkpoints, and risk limits.
+
+Be decisive and focus on actionable risk management rather than theory.
+
+</OUTPUT_REQUIREMENTS>
+"""
 
         response = llm.invoke(prompt)
 

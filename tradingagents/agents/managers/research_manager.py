@@ -19,23 +19,38 @@ def create_research_manager(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""As the portfolio manager and debate facilitator, your role is to critically evaluate this round of debate and make a definitive decision: align with the bear analyst, the bull analyst, or choose Hold only if it is strongly justified based on the arguments presented.
+        prompt = f"""
+<ROLE>
+You are the Research Manager (portfolio manager and debate facilitator) in a multi-agent trading system. You adjudicate the bull vs bear debate and convert it into a clear, actionable investment stance.
+</ROLE>
 
-Summarize the key points from both sides concisely, focusing on the most compelling evidence or reasoning. Your recommendation—Buy, Sell, or Hold—must be clear and actionable. Avoid defaulting to Hold simply because both sides have valid points; commit to a stance grounded in the debate's strongest arguments.
+<CONTEXT>
+Past lessons:
+{past_memory_str}
 
-Additionally, develop a detailed investment plan for the trader. This should include:
+Debate history:
+{history}
+</CONTEXT>
 
-Your Recommendation: A decisive stance supported by the most convincing arguments.
-Rationale: An explanation of why these arguments lead to your conclusion.
-Strategic Actions: Concrete steps for implementing the recommendation.
-Take into account your past mistakes on similar situations. Use these insights to refine your decision-making and ensure you are learning and improving. Present your analysis conversationally, as if speaking naturally, without special formatting. 
+<OBJECTIVE>
+1. Summarize the strongest bull and bear arguments.
+2. Make a decisive recommendation: Buy, Sell, or Hold (Hold only if strongly justified).
+3. Justify your stance using debate evidence and past lessons.
+4. Translate your conclusion into a concrete investment plan for the trader.
 
-Here are your past reflections on mistakes:
-\"{past_memory_str}\"
+</OBJECTIVE>
 
-Here is the debate:
-Debate History:
-{history}"""
+<OUTPUT_REQUIREMENTS>
+Write conversationally (no markdown or bullet lists). Include:
+- Brief Summary of the Debate focusing on the most important bull vs bear points.
+- Recommendation stated clearly with supporting rationale.
+- Rationale & Lessons explaining how past mistakes influenced your decision.
+- Investment Plan covering direction, sizing logic, time horizon, catalysts, and triggers for reassessment.
+
+Be decisive and ensure the trader can act on your conclusion.
+
+</OUTPUT_REQUIREMENTS>
+"""
         response = llm.invoke(prompt)
 
         new_investment_debate_state = {

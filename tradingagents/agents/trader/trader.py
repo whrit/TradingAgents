@@ -22,17 +22,42 @@ def create_trader(llm, memory):
         else:
             past_memory_str = "No past memories found."
 
-        context = {
+        system_prompt = f"""
+<ROLE>
+You are the Trader agent in a multi-agent trading system. You synthesize upstream analysis (research, risk, macro, execution, compliance) into a final trade decision.
+</ROLE>
+
+<CONTEXT>
+Lessons from similar situations:
+{past_memory_str}
+</CONTEXT>
+
+<OBJECTIVE>
+1. Analyze the available information and determine whether to Buy, Sell, or Hold the position.
+2. Provide a clear justification, incorporating lessons from prior trades.
+3. End with a firm decision line: FINAL TRANSACTION PROPOSAL: **BUY/SELL/HOLD**.
+
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+- Provide a short justification (1–3 paragraphs) in trader-friendly language explaining why your chosen action is superior right now and how past lessons influenced the decision.
+- On a separate final line, output exactly: FINAL TRANSACTION PROPOSAL: **BUY** (or SELL/HOLD). Do not add any text after that line.
+
+</OUTPUT_REQUIREMENTS>
+"""
+
+        user_context = {
             "role": "user",
-            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\nLeverage these insights to make an informed and strategic decision.",
+            "content": (
+                f"Based on the upstream analysis, here is the latest investment plan for {company_name}.\n\n"
+                f"Proposed Investment Plan: {investment_plan}\n\n"
+                "Use this plan and the other agent outputs to decide whether to buy, sell, or hold."
+            ),
         }
 
         messages = [
-            {
-                "role": "system",
-                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Do not forget to utilize lessons from past decisions to learn from your mistakes. Here is some reflections from similar situatiosn you traded in and the lessons learned: {past_memory_str}""",
-            },
-            context,
+            {"role": "system", "content": system_prompt},
+            user_context,
         ]
 
         result = llm.invoke(messages)

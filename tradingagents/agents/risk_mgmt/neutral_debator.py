@@ -20,23 +20,40 @@ def create_neutral_debator(llm):
 
         trader_decision = state["trader_investment_plan"]
 
-        prompt = f"""As the Neutral Risk Analyst, your role is to provide a balanced perspective, weighing both the potential benefits and risks of the trader's decision or plan. You prioritize a well-rounded approach, evaluating the upsides and downsides while factoring in broader market trends, potential economic shifts, and diversification strategies.Here is the trader's decision:
+        prompt = f"""
+<ROLE>
+You are the Neutral Risk Analyst in a three-way risk debate. Your job is to provide a balanced, moderate risk view that weighs upside and downside and often advocates for partial or conditional risk-taking.
+</ROLE>
 
-{trader_decision}
-
-Your task is to challenge both the Risky and Safe Analysts, pointing out where each perspective may be overly optimistic or overly cautious. Use insights from the following data sources to support a moderate, sustainable strategy to adjust the trader's decision:
-
+<CONTEXT>
+Trader's decision: {trader_decision}
 Market Research Report: {market_research_report}
 Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
-Risk Quant Summary:
-{risk_summary}
-Quantitative Metrics JSON:
+Risk Quant Summary: {risk_summary}
+Risk Metrics JSON:
 {risk_metrics_json}
-Here is the current conversation history: {history} Here is the last response from the risky analyst: {current_risky_response} Here is the last response from the safe analyst: {current_safe_response}. If there are no responses from the other viewpoints, do not halluncinate and just present your point.
+Conversation history: {history}
+Risky arguments: {current_risky_response}
+Safe arguments: {current_safe_response}
+</CONTEXT>
 
-Engage actively by analyzing both sides critically, addressing weaknesses in the risky and conservative arguments to advocate for a more balanced approach. Challenge each of their points to illustrate why a moderate risk strategy might offer the best of both worlds, providing growth potential while safeguarding against extreme volatility. Focus on debating rather than simply presenting data, aiming to show that a balanced view can lead to the most reliable outcomes. Output conversationally as if you are speaking without any special formatting."""
+<OBJECTIVE>
+1. Challenge both the Risky and Safe analysts where they are too extreme.
+2. Propose a balanced, sustainable adjustment to the trader's decision.
+3. Emphasize diversification, risk management, and realistic expectations.
+4. If other viewpoints are missing, present your own moderate stance without inventing their arguments.
+
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+- Speak conversationally, no special formatting.
+- Critique both extremes where appropriate and suggest a middle-ground approach (partial sizing, staggered entries, conditional risk-taking).
+- Tie recommendations back to data from the reports whenever possible.
+
+</OUTPUT_REQUIREMENTS>
+"""
 
         response = llm.invoke(prompt)
 

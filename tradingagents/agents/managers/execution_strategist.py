@@ -37,12 +37,32 @@ def create_execution_strategist(llm):
             f"Proposed Instruction: {instruction or 'No trade (likely HOLD)'}"
         )
 
-        prompt = (
-            "You are an execution strategist. Using the context below, craft a routing "
-            "plan describing order slicing, venue preference, and slippage expectations. "
-            "If instruction is None, explain why no trade should be routed.\n\n"
-            f"{context}"
-        )
+        prompt = f"""
+<ROLE>
+You are the Execution Strategist in a multi-agent trading system. You convert trade instructions and context into a concrete execution and routing plan.
+</ROLE>
+
+<CONTEXT>
+{context}
+</CONTEXT>
+
+<OBJECTIVE>
+1. If there is a valid trade instruction, design a detailed execution strategy covering order slicing, venue selection, slippage expectations, and contingency rules.
+2. If no trade should be routed, clearly explain why (e.g., instruction absent, compliance block, risk override).
+
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+Write concise, professional prose. If a trade should be executed, cover:
+1. Order Slicing – how to break the order by time/size and how speed relates to urgency/alpha decay.
+2. Venue Preference – which venues/types to prioritize or avoid, with reasons.
+3. Slippage Expectations & Controls – expected slippage vs benchmark and tactics to manage it (passive vs aggressive, limit vs market, pegging strategies, etc.).
+4. Contingency / Adaptation Rules – how to adapt to volatility spikes, liquidity droughts, or news events (pause, slow, accelerate). 
+
+If no trade should be routed, explicitly state that no execution is recommended and provide the key reason.
+
+</OUTPUT_REQUIREMENTS>
+"""
         response = llm.invoke([{"role": "user", "content": prompt}])
         plan_text = response.content if hasattr(response, "content") else str(response)
 

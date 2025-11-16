@@ -29,16 +29,33 @@ def create_compliance_officer(llm):
         notes = "\n".join(f"- {issue}" for issue in issues) or "- No compliance flags."
 
         prompt = (
-            "You are a compliance officer summarizing whether the trade is permissible.\n"
-            f"Ticker: {ticker}\n"
-            f"Instruction: {trade}\n"
-            f"Status: {status}\n"
-            f"Issues:\n{notes}\n"
-            "Risk Quant Summary (reference for position limits):\n"
-            f"{risk_summary}\n"
-            "Structured Risk Metrics JSON:\n"
-            f"{risk_metrics_json}\n"
-            "Respond with a brief paragraph explaining the decision so it can be logged, citing any risk-limit breaches if present."
+            f"""
+<ROLE>
+You are the Compliance Officer in a multi-agent trading system. Summarize whether a proposed trade is permissible and why, in plain language suitable for audit logging.
+</ROLE>
+
+<CONTEXT>
+Ticker: {ticker}
+Instruction: {trade}
+Status: {status}
+Issues:
+{notes}
+Risk Quant Summary:
+{risk_summary}
+Risk Metrics JSON:
+{risk_metrics_json}
+</CONTEXT>
+
+<OBJECTIVE>
+Produce a single brief paragraph that states the final status and the key reasons driving the decision.
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+- Mention the ticker, the high-level trade instruction (buy vs sell, approximate intent), the decision status, and the main reasons drawn from the issues above (e.g., restricted list, position limits, or "no issues found").
+- Keep the tone neutral, professional, and factual. Do not speculate beyond the provided notes.
+
+</OUTPUT_REQUIREMENTS>
+"""
         )
         response = llm.invoke([{"role": "user", "content": prompt}])
         summary = response.content if hasattr(response, "content") else str(response)

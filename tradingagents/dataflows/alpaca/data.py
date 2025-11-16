@@ -50,6 +50,33 @@ def _map_interval(interval: Optional[str]) -> str:
 
 
 def _bars_to_dataframe(bars) -> pd.DataFrame:
+    if isinstance(bars, pd.DataFrame):
+        df = bars.copy()
+        rename_map = {
+            "o": "Open",
+            "h": "High",
+            "l": "Low",
+            "c": "Close",
+            "v": "Volume",
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }
+        df = df.rename(columns=rename_map)
+        if isinstance(df.index, pd.DatetimeIndex):
+            if df.index.tz is not None:
+                df.index = df.index.tz_convert(None)
+        else:
+            df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        df.index.name = "Date"
+        return df[[col for col in DEFAULT_COLUMNS if col in df.columns]]
+
+    if hasattr(bars, "df"):
+        return _bars_to_dataframe(bars.df)
+
     if not bars:
         return pd.DataFrame(columns=DEFAULT_COLUMNS)
 
@@ -84,16 +111,21 @@ def _dataframe_to_csv(df: pd.DataFrame, header: str) -> str:
     return f"{header}\n{csv_body}" if csv_body else f"{header}\n"
 
 
-def _resolve_client(as_dataframe: bool) -> AlpacaDataClient:
-    return AlpacaDataClient() if as_dataframe else get_client()
+def _resolve_client(as_dataframe: bool):
+    return (
+        (AlpacaDataClient(), True)
+        if as_dataframe
+        else (get_client(), False)
+    )
 
 
 def _fetch_bars(
-    client: AlpacaDataClient,
+    client,
     symbol: str,
     timeframe: str,
     start: datetime,
     end: datetime,
+    use_sdk: bool,
     max_retries: int = 3,
 ):
     endpoint = f"/v2/stocks/{symbol}/bars"
@@ -107,8 +139,24 @@ def _fetch_bars(
     attempts = 0
     while True:
         try:
-            response = client._request("GET", endpoint, params=params)
-            return response.get("bars", [])
+            if use_sdk:
+                result = client.get_bars(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start=start.isoformat(),
+                    end=end.isoformat(),
+                )
+            else:
+                response = client._request("GET", endpoint, params=params)
+                result = response.get("bars", [])
+
+            if isinstance(result, pd.DataFrame):
+                return result
+            if hasattr(result, "df"):
+                return result.df
+            if isinstance(result, dict):
+                return result.get("bars", [])
+            return result
         except Exception as exc:  # pragma: no cover - delegated to tests
             name = exc.__class__.__name__
             if "RateLimit" in name:
@@ -135,8 +183,8 @@ def get_stock_data(
         raise ValueError("start_date must be before end_date")
 
     timeframe = _map_interval(interval)
-    client = _resolve_client(as_dataframe)
-    bars = _fetch_bars(client, symbol, timeframe, start, end, max_retries)
+    client, use_sdk = _resolve_client(as_dataframe)
+    bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
     df = _bars_to_dataframe(bars)
 
     if as_dataframe:
@@ -189,8 +237,8 @@ def get_bars(
     if start > end:
         raise ValueError("start_date must be before end_date")
 
-    client = _resolve_client(as_dataframe)
-    bars = _fetch_bars(client, symbol, timeframe, start, end, max_retries)
+    client, use_sdk = _resolve_client(as_dataframe)
+    bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
     df = _bars_to_dataframe(bars)
 
     if as_dataframe:
@@ -204,5 +252,5 @@ def get_bars(
         f"# Records: {len(df)}\n"
         f"# Data source: Alpaca Markets\n"
     )
-    df_for_csv = df.reset_index().rename(columns={"index": "Timestamp"})
+    df_for_csv = df.reset_index().rename(columns={"Date": "Timestamp"})
     return _dataframe_to_csv(df_for_csv.set_index("Timestamp"), header)

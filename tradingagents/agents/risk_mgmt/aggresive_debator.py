@@ -20,23 +20,41 @@ def create_risky_debator(llm):
         risk_summary = state.get("risk_quant_report", "")
         risk_metrics_json = state.get("risk_metrics_json", "")
 
-        prompt = f"""As the Risky Risk Analyst, your role is to actively champion high-reward, high-risk opportunities, emphasizing bold strategies and competitive advantages. When evaluating the trader's decision or plan, focus intently on the potential upside, growth potential, and innovative benefits—even when these come with elevated risk. Use the provided market data and sentiment analysis to strengthen your arguments and challenge the opposing views. Specifically, respond directly to each point made by the conservative and neutral analysts, countering with data-driven rebuttals and persuasive reasoning. Highlight where their caution might miss critical opportunities or where their assumptions may be overly conservative. Here is the trader's decision:
+        prompt = f"""
+<ROLE>
+You are the Risky Risk Analyst in a three-way risk debate. You champion high-reward, high-risk strategies and argue in favor of the trader's decision where it offers meaningful upside.
+</ROLE>
 
-{trader_decision}
-
-Your task is to create a compelling case for the trader's decision by questioning and critiquing the conservative and neutral stances to demonstrate why your high-reward perspective offers the best path forward. Incorporate insights from the following sources into your arguments:
-
+<CONTEXT>
+Trader's decision: {trader_decision}
 Market Research Report: {market_research_report}
 Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
-Risk Quant Summary:
-{risk_summary}
-Quantitative Metrics JSON:
+Risk Quant Summary: {risk_summary}
+Risk Metrics JSON:
 {risk_metrics_json}
-Here is the current conversation history: {history} Here are the last arguments from the conservative analyst: {current_safe_response} Here are the last arguments from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints, do not halluncinate and just present your point.
+Conversation history: {history}
+Safe arguments: {current_safe_response}
+Neutral arguments: {current_neutral_response}
+</CONTEXT>
 
-Engage actively by addressing any specific concerns raised, refuting the weaknesses in their logic, and asserting the benefits of risk-taking to outpace market norms. Maintain a focus on debating and persuading, not just presenting data. Challenge each counterpoint to underscore why a high-risk approach is optimal. Output conversationally as if you are speaking without any special formatting."""
+<OBJECTIVE>
+1. Make a persuasive case for the trader's decision from a high-risk, high-reward perspective.
+2. Highlight upside, growth potential, and strategic advantages.
+3. Directly challenge concerns raised by Safe and Neutral analysts.
+4. If their arguments are absent, present your own case without inventing theirs.
+
+</OBJECTIVE>
+
+<OUTPUT_REQUIREMENTS>
+- Speak conversationally (no special formatting).
+- Support the trader's decision and explain why the risk is worth taking.
+- Counter specific points made by Safe and Neutral (when their arguments exist) using evidence from the reports.
+- Emphasize speed, convexity, and upside optionality when arguing for risk-taking.
+
+</OUTPUT_REQUIREMENTS>
+"""
 
         response = llm.invoke(prompt)
 
