@@ -70,7 +70,7 @@ class TestAlpacaDataVendorInterface:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14', as_dataframe=True)
 
             assert isinstance(result, pd.DataFrame)
 
@@ -90,7 +90,7 @@ class TestAlpacaDataVendorInterface:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
             # Must have yfinance-compatible columns (capitalized)
             expected_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
@@ -112,7 +112,7 @@ class TestAlpacaDataVendorInterface:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
             assert isinstance(result.index, pd.DatetimeIndex)
 
@@ -148,7 +148,7 @@ class TestAlpacaDataVendorAuthentication:
 
                 MockClient.return_value.get_bars.return_value = mock_bars
 
-                get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+                get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
                 # Verify client was initialized with environment credentials
                 MockClient.assert_called()
@@ -159,7 +159,7 @@ class TestAlpacaDataVendorAuthentication:
 
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="ALPACA_API_KEY.*ALPACA_SECRET_KEY"):
-                get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+                get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
 
 class TestAlpacaDataVendorErrorHandling:
@@ -179,7 +179,7 @@ class TestAlpacaDataVendorErrorHandling:
         from tradingagents.dataflows.alpaca.data import get_stock_data
 
         with pytest.raises(ValueError, match="symbol.*empty|invalid"):
-            get_stock_data('', '2025-01-14', '2025-01-14')
+            get_stock_data('', '2025-01-14', '2025-01-14', as_dataframe=True)
 
     def test_invalid_symbol_raises_error(self):
         """Test that invalid symbol raises appropriate error."""
@@ -190,7 +190,7 @@ class TestAlpacaDataVendorErrorHandling:
             MockClient.return_value.get_bars.side_effect = Exception("Invalid symbol")
 
             with pytest.raises(Exception, match="Invalid symbol"):
-                get_stock_data('INVALID_SYMBOL_XYZ', '2025-01-14', '2025-01-14')
+                get_stock_data('INVALID_SYMBOL_XYZ', '2025-01-14', '2025-01-14', as_dataframe=True)
 
     def test_network_error_handling(self):
         """Test graceful handling of network errors."""
@@ -200,7 +200,7 @@ class TestAlpacaDataVendorErrorHandling:
             MockClient.return_value.get_bars.side_effect = ConnectionError("Network error")
 
             with pytest.raises(ConnectionError):
-                get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+                get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
     def test_rate_limit_handling(self):
         """Test that rate limiting is handled with retries."""
@@ -229,7 +229,7 @@ class TestAlpacaDataVendorErrorHandling:
 
             # Should succeed after retry
             with patch('time.sleep'):  # Don't actually sleep in tests
-                result = get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+                result = get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
                 assert isinstance(result, pd.DataFrame)
 
 
@@ -266,7 +266,7 @@ class TestAlpacaDataVendorTimeframes:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            get_stock_data('AAPL', '2025-01-14', '2025-01-14', interval=timeframe)
+            get_stock_data('AAPL', '2025-01-14', '2025-01-14', interval=timeframe, as_dataframe=True)
 
             # Verify Alpaca API was called with correct timeframe
             call_args = MockClient.return_value.get_bars.call_args
@@ -289,7 +289,7 @@ class TestAlpacaDataVendorTimeframes:
             MockClient.return_value.get_bars.return_value = mock_bars
 
             # Call without interval parameter
-            get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+            get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
             # Should default to 1Day
 
@@ -322,7 +322,7 @@ class TestAlpacaDataVendorMocking:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-14', '2025-01-14', as_dataframe=True)
 
             # Verify mock was called, not real API
             MockClient.assert_called()
@@ -356,7 +356,7 @@ class TestAlpacaDataVendorDataFormat:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14', as_dataframe=True)
 
             for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
                 assert pd.api.types.is_numeric_dtype(result[col])
@@ -378,7 +378,7 @@ class TestAlpacaDataVendorDataFormat:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14', as_dataframe=True)
 
             # Should be sorted by index (date)
             assert result.index.is_monotonic_increasing
@@ -393,7 +393,7 @@ class TestAlpacaDataVendorDataFormat:
 
             MockClient.return_value.get_bars.return_value = mock_bars
 
-            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14', as_dataframe=True)
 
             assert isinstance(result, pd.DataFrame)
             assert len(result) == 0
@@ -428,7 +428,7 @@ class TestAlpacaDataVendorDateHandling:
             MockClient.return_value.get_bars.return_value = mock_bars
 
             # Should accept string dates
-            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14')
+            result = get_stock_data('AAPL', '2025-01-13', '2025-01-14', as_dataframe=True)
             assert isinstance(result, pd.DataFrame)
 
     def test_accepts_datetime_objects(self):
@@ -450,7 +450,7 @@ class TestAlpacaDataVendorDateHandling:
             start = datetime(2025, 1, 13)
             end = datetime(2025, 1, 14)
 
-            result = get_stock_data('AAPL', start, end)
+            result = get_stock_data('AAPL', start, end, as_dataframe=True)
             assert isinstance(result, pd.DataFrame)
 
     def test_invalid_date_range_raises_error(self):
