@@ -1,2308 +1,5693 @@
+Alpha Vantage API Documentation
+Our stock APIs © are grouped into eight categories: (1) Core Time Series Stock Data APIs, (2) US Options Data APIs, (3) Alpha Intelligence™, (4) Fundamental Data, (5) Physical and Crypto Currencies (e.g., Bitcoin), (6) Commodities, (7) Economic Indicators, and (8) Technical Indicators - also outlined here. Examples in this documentation are for demo purposes. Claim your free API key today to explore our full API offerings!
 
----
+Time Series Stock Data APIs
+This suite of APIs provide global equity data in 4 different temporal resolutions: (1) daily, (2) weekly, (3) monthly, and (4) intraday, with 20+ years of historical depth. A lightweight ticker quote endpoint and several utility functions such as ticker search and market open/closure status are also included for your convenience.
 
-# **Alpha Vantage API Reference (Non-Premium)**
 
----
+TIME_SERIES_INTRADAY Trending
 
-# **Table of Contents**
+This API returns current and 20+ years of historical intraday OHLCV time series of the equity specified, covering pre-market and post-market hours where applicable (e.g., 4:00am to 8:00pm Eastern Time for the US market). You can query both raw (as-traded) and split/dividend-adjusted intraday data from this endpoint. The OHLCV data is sometimes called "candles" in finance literature.
 
-### **1. Time Series Stock Data**
 
-* [TIME_SERIES_INTRADAY](#time_series_intraday)
-* [TIME_SERIES_DAILY](#time_series_daily)
-* [TIME_SERIES_WEEKLY](#time_series_weekly)
-* [TIME_SERIES_WEEKLY_ADJUSTED](#time_series_weekly_adjusted)
-* [TIME_SERIES_MONTHLY](#time_series_monthly)
-* [TIME_SERIES_MONTHLY_ADJUSTED](#time_series_monthly_adjusted)
-* [GLOBAL_QUOTE](#global_quote)
-* [SYMBOL_SEARCH](#symbol_search)
-* [MARKET_STATUS](#market_status)
+API Parameters
+❚ Required: function
 
-### **2. Options Data**
+The time series of your choice. In this case, function=TIME_SERIES_INTRADAY
 
-* [HISTORICAL_OPTIONS](#historical_options)
+❚ Required: symbol
 
-### **3. Alpha Intelligence**
+The name of the equity of your choice. For example: symbol=IBM
 
-* [NEWS_SENTIMENT](#news_sentiment)
-* [EARNINGS_CALL_TRANSCRIPT](#earnings_call_transcript)
-* [TOP_GAINERS_LOSERS](#top_gainers_losers)
-* [INSIDER_TRANSACTIONS](#insider_transactions)
+❚ Required: interval
 
-### **4. Advanced Analytics**
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min
 
-* [ANALYTICS_FIXED_WINDOW](#analytics_fixed_window)
-* [ANALYTICS_SLIDING_WINDOW](#analytics_sliding_window)
+❚ Optional: adjusted
 
-### **5. Fundamental Data**
+By default, adjusted=true and the output time series is adjusted by historical split and dividend events. Set adjusted=false to query raw (as-traded) intraday values.
 
-* [OVERVIEW](#overview)
-* [ETF_PROFILE](#etf_profile)
-* [DIVIDENDS](#dividends)
-* [SPLITS](#splits)
-* [INCOME_STATEMENT](#income_statement)
-* [BALANCE_SHEET](#balance_sheet)
-* [CASH_FLOW](#cash_flow)
-* [SHARES_OUTSTANDING](#shares_outstanding)
-* [EARNINGS](#earnings)
-* [EARNINGS_ESTIMATES](#earnings_estimates)
-* [LISTING_STATUS](#listing_status)
-* [EARNINGS_CALENDAR](#earnings_calendar)
-* [IPO_CALENDAR](#ipo_calendar)
+❚ Optional: extended_hours
 
-### **6. Foreign Exchange (FX)**
+By default, extended_hours=true and the output time series will include both the regular trading hours and the extended (pre-market and post-market) trading hours (4:00am to 8:00pm Eastern Time for the US market). Set extended_hours=false to query regular trading hours (9:30am to 4:00pm US Eastern Time) only.
 
-* [CURRENCY_EXCHANGE_RATE](#currency_exchange_rate)
-* [FX_DAILY](#fx_daily)
-* [FX_WEEKLY](#fx_weekly)
-* [FX_MONTHLY](#fx_monthly)
+❚ Optional: month
 
-### **7. Digital & Crypto Currencies**
+By default, this parameter is not set and the API will return intraday data for the most recent days of trading. You can use the month parameter (in YYYY-MM format) to query a specific month in history. For example, month=2009-01. Any month in the last 20+ years since 2000-01 (January 2000) is supported.
 
-* [DIGITAL_CURRENCY_DAILY](#digital_currency_daily)
-* [DIGITAL_CURRENCY_WEEKLY](#digital_currency_weekly)
-* [DIGITAL_CURRENCY_MONTHLY](#digital_currency_monthly)
+❚ Optional: outputsize
 
-### **8. Commodities**
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points in the intraday time series; full returns trailing 30 days of the most recent intraday data if the month parameter (see above) is not specified, or the full intraday data for a specific month in history if the month parameter is specified. The "compact" option is recommended if you would like to reduce the data size of each API call.
 
-* [WTI](#wti)
-* [BRENT](#brent)
-* [NATURAL_GAS](#natural_gas)
-* [COPPER](#copper)
-* [ALUMINUM](#aluminum)
-* [WHEAT](#wheat)
-* [CORN](#corn)
-* [COTTON](#cotton)
-* [SUGAR](#sugar)
-* [COFFEE](#coffee)
-* [ALL_COMMODITIES](#all_commodities)
+❚ Optional: datatype
 
-### **9. Economic Indicators**
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the intraday time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
 
-* [REAL_GDP](#real_gdp)
-* [REAL_GDP_PER_CAPITA](#real_gdp_per_capita)
-* [TREASURY_YIELD](#treasury_yield)
-* [FEDERAL_FUNDS_RATE](#federal_funds_rate)
-* [CPI](#cpi)
-* [INFLATION](#inflation)
-* [RETAIL_SALES](#retail_sales)
-* [DURABLES](#durables)
-* [UNEMPLOYMENT](#unemployment)
-* [NONFARM_PAYROLL](#nonfarm_payroll)
+❚ Required: apikey
 
-### **10. Technical Indicators**
+Your API key. Claim your free API key here.
 
-#### 10.1 Moving Averages
 
-* [SMA](#sma)
-* [EMA](#ema)
-* [WMA](#wma)
-* [DEMA](#dema)
-* [TEMA](#tema)
-* [TRIMA](#trima)
-* [KAMA](#kama)
-* [MAMA](#mama)
-* [T3](#t3)
-
-#### 10.2 Oscillators & Momentum
-
-* [MACD](#macd)
-* [MACDEXT](#macdext)
-* [STOCH](#stoch)
-* [STOCHF](#stochf)
-* [RSI](#rsi)
-* [STOCHRSI](#stochrsi)
-* [WILLR](#willr)
-* [ADX](#adx)
-* [ADXR](#adxr)
-* [APO](#apo)
-* [PPO](#ppo)
-* [MOM](#mom)
-* [BOP](#bop)
-* [CCI](#cci)
-* [CMO](#cmo)
-* [ROC](#roc)
-* [ROCR](#rocr)
-* [AROON](#aroon)
-* [AROONOSC](#aroonosc)
-* [MFI](#mfi)
-* [TRIX](#trix)
-* [ULTOSC](#ultosc)
-* [DX](#dx)
-* [MINUS_DI](#minus_di)
-* [PLUS_DI](#plus_di)
-* [MINUS_DM](#minus_dm)
-* [PLUS_DM](#plus_dm)
-* [BBANDS](#bbands)
-
-#### 10.3 Volatility Indicators
-
-* [MIDPOINT](#midpoint)
-* [MIDPRICE](#midprice)
-* [SAR](#sar)
-* [TRANGE](#trange)
-* [ATR](#atr)
-* [NATR](#natr)
-
-#### 10.4 Volume Indicators
-
-* [AD](#ad)
-* [ADOSC](#adosc)
-* [OBV](#obv)
-
-#### 10.5 Hilbert Transform Indicators
-
-* [HT_TRENDLINE](#ht_trendline)
-* [HT_SINE](#ht_sine)
-* [HT_TRENDMODE](#ht_trendmode)
-* [HT_DCPERIOD](#ht_dcperiod)
-* [HT_DCPHASE](#ht_dcphase)
-* [HT_PHASOR](#ht_phasor)
-
----
-
-# **1. Time Series Stock Data**
-
----
-
-## <a id="time_series_intraday"></a> **TIME_SERIES_INTRADAY**
-
-Returns intraday OHLCV time series (1m, 5m, 15m, 30m, 60m). Supports full month-level historical retrieval.
-
-**Parameters**
-
-* `function`: `TIME_SERIES_INTRADAY`
-* `symbol` (required)
-* `interval` (required): `1min` `5min` `15min` `30min` `60min`
-* `adjusted` (optional): `true` (default) or `false`
-* `extended_hours` (optional): `true` or `false`
-* `month` (optional): YYYY-MM
-* `outputsize` (optional): `compact` | `full`
-* `datatype` (optional): `json` | `csv`
-* `apikey` (required)
-
-**Examples**
-
-```
+Examples (click for JSON output)
+The API will return the most recent 100 intraday OHLCV bars by default when the outputsize parameter is not set
 https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo
+
+Query the most recent full 30 days of intraday data by setting outputsize=full
 https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&outputsize=full&apikey=demo
-```
 
----
+Query intraday data for a given month in history (e.g., 2009-01). Any month in the last 20+ years (since 2000-01) is supported
+https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&month=2009-01&outputsize=full&apikey=demo
 
-## <a id="time_series_daily"></a> **TIME_SERIES_DAILY**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo&datatype=csv
 
-Daily raw OHLCV (20+ years).
 
-**Parameters**
+💡 Tip: the intraday data (including 20+ years of historical data) is updated at the end of each trading day for all users by default. If you would like to access realtime or 15-minute delayed intraday data, please subscribe to a premium membership plan for your personal use. For commercial use, please contact sales.
 
-* `function`: `TIME_SERIES_DAILY`
-* `symbol` (required)
-* `outputsize`: `compact` | `full`
-* `datatype`: `json` | `csv`
-* `apikey` (required)
+* Realtime and 15-minute delayed US market data is regulated by the stock exchanges, FINRA, and the SEC. Learn more about the key market data policies you need to know as a data consumer.
 
-**Example**
 
-```
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+TIME_SERIES_DAILY
+
+This API returns raw (as-traded) daily time series (date, daily open, daily high, daily low, daily close, daily volume) of the global equity specified, covering 20+ years of historical data. The OHLCV data is sometimes called "candles" in finance literature. If you are also interested in split/dividend-adjusted data, please use the Daily Adjusted API, which covers adjusted close values and historical split and dividend events.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_DAILY
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: outputsize
+
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points; full returns the full-length time series of 20+ years of historical data. The "compact" option is recommended if you would like to reduce the data size of each API call.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Sample ticker traded in the United States
 https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&outputsize=full&apikey=demo
 
-## <a id="time_series_weekly"></a> **TIME_SERIES_WEEKLY**
+Sample ticker traded in UK - London Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=TSCO.LON&outputsize=full&apikey=demo
 
-Weekly OHLCV time series.
+Sample ticker traded in Canada - Toronto Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SHOP.TRT&outputsize=full&apikey=demo
 
-**Parameters**
+Sample ticker traded in Canada - Toronto Venture Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=GPV.TRV&outputsize=full&apikey=demo
 
-* `function`: `TIME_SERIES_WEEKLY`
-* `symbol` (required)
-* `datatype`: `json` | `csv`
-* `apikey` (required)
+Sample ticker traded in Germany - XETRA
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MBG.DEX&outputsize=full&apikey=demo
 
-**Example**
+Sample ticker traded in India - BSE
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=RELIANCE.BSE&outputsize=full&apikey=demo
 
-```
+Sample ticker traded in China - Shanghai Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=600104.SHH&outputsize=full&apikey=demo
+
+Sample ticker traded in China - Shenzhen Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=000002.SHZ&outputsize=full&apikey=demo
+
+The above is just a small sample of the 100,000+ symbols we support. Please refer to our Search Endpoint to look up any supported global stock, ETF, or mutual fund symbols of your interest.
+
+
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo&datatype=csv
+
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+TIME_SERIES_DAILY_ADJUSTED Trending Premium
+
+This API returns raw (as-traded) daily open/high/low/close/volume values, adjusted close values, and historical split/dividend events of the global equity specified, covering 20+ years of historical data. The OHLCV data is sometimes called "candles" in finance literature.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_DAILY_ADJUSTED
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: outputsize
+
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points; full returns the full-length time series of 20+ years of historical data. The "compact" option is recommended if you would like to reduce the data size of each API call.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Sample ticker traded in the United States
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=IBM&apikey=demo
+
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=IBM&outputsize=full&apikey=demo
+
+Sample ticker traded in UK - London Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=TSCO.LON&outputsize=full&apikey=demo
+
+Sample ticker traded in Canada - Toronto Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SHOP.TRT&outputsize=full&apikey=demo
+
+Sample ticker traded in Canada - Toronto Venture Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=GPV.TRV&outputsize=full&apikey=demo
+
+Sample ticker traded in Germany - XETRA
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=MBG.DEX&outputsize=full&apikey=demo
+
+Sample ticker traded in India - BSE
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=RELIANCE.BSE&outputsize=full&apikey=demo
+
+Sample ticker traded in China - Shanghai Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=600104.SHH&outputsize=full&apikey=demo
+
+Sample ticker traded in China - Shenzhen Stock Exchange
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=000002.SHZ&outputsize=full&apikey=demo
+
+The above is just a small sample of the 100,000+ symbols we support. Please refer to our Search Endpoint to look up any supported global stock, ETF, or mutual fund symbols of your interest.
+
+
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=IBM&apikey=demo&datatype=csv
+
+
+💡 Tip: this is a premium API function. Subscribe to a premium membership plan to instantly unlock all premium APIs.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+TIME_SERIES_WEEKLY
+
+This API returns weekly time series (last trading day of each week, weekly open, weekly high, weekly low, weekly close, weekly volume) of the global equity specified, covering 20+ years of historical data.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_WEEKLY
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the weekly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=TSCO.LON&apikey=demo
 
-## <a id="time_series_weekly_adjusted"></a> **TIME_SERIES_WEEKLY_ADJUSTED**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=IBM&apikey=demo&datatype=csv
 
-Weekly adjusted OHLCV + dividends.
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `TIME_SERIES_WEEKLY_ADJUSTED`
-* `symbol` (required)
-* `datatype`
-* `apikey` (required)
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+TIME_SERIES_WEEKLY_ADJUSTED
+
+This API returns weekly adjusted time series (last trading day of each week, weekly open, weekly high, weekly low, weekly close, weekly adjusted close, weekly volume, weekly dividend) of the global equity specified, covering 20+ years of historical data.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_WEEKLY_ADJUSTED
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the weekly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=TSCO.LON&apikey=demo
 
-## <a id="time_series_monthly"></a> **TIME_SERIES_MONTHLY**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=IBM&apikey=demo&datatype=csv
 
-Monthly OHLCV.
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `TIME_SERIES_MONTHLY`
-* `symbol` (required)
-* `datatype`
-* `apikey`
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+TIME_SERIES_MONTHLY
+
+This API returns monthly time series (last trading day of each month, monthly open, monthly high, monthly low, monthly close, monthly volume) of the global equity specified, covering 20+ years of historical data.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_MONTHLY
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the monthly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=TSCO.LON&apikey=demo
 
-## <a id="time_series_monthly_adjusted"></a> **TIME_SERIES_MONTHLY_ADJUSTED**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=IBM&apikey=demo&datatype=csv
 
-Monthly adjusted OHLCV + dividends.
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `TIME_SERIES_MONTHLY_ADJUSTED`
-* `symbol` (required)
-* `datatype`
-* `apikey`
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+TIME_SERIES_MONTHLY_ADJUSTED
+
+This API returns monthly adjusted time series (last trading day of each month, monthly open, monthly high, monthly low, monthly close, monthly adjusted close, monthly volume, monthly dividend) of the equity specified, covering 20+ years of historical data.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=TIME_SERIES_MONTHLY_ADJUSTED
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the monthly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=TSCO.LON&apikey=demo
 
-## <a id="global_quote"></a> **GLOBAL_QUOTE**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=IBM&apikey=demo&datatype=csv
 
-Latest quote snapshot.
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `GLOBAL_QUOTE`
-* `symbol` (required)
-* `datatype`
-* `apikey`
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+Quote Endpoint Trending
+
+This endpoint returns the latest price and volume information for a ticker of your choice. You can specify one ticker per API request.
+
+If you would like to query a large universe of tickers in bulk, you may want to try out our Realtime Bulk Quotes API, which accepts up to 100 tickers per API request.
+
+
+API Parameters
+❚ Required: function
+
+The API function of your choice.
+
+❚ Required: symbol
+
+The symbol of the global ticker of your choice. For example: symbol=IBM.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the quote data in JSON format; csv returns the quote data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=300135.SHZ&apikey=demo
 
-## <a id="symbol_search"></a> **SYMBOL_SEARCH**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo&datatype=csv
 
-Symbol auto-complete search.
 
-**Parameters**
+💡 Tip: by default, the quote endpoint is updated at the end of each trading day for all users. If you would like to access realtime or 15-minute delayed stock quote data for the US market, please subscribe to a premium membership plan for your personal use. For commercial use, please contact sales.
 
-* `function`: `SYMBOL_SEARCH`
-* `keywords` (required)
-* `datatype`
-* `apikey`
+* Realtime and 15-minute delayed US market data is regulated by the stock exchanges, FINRA, and the SEC. Learn more about the key market data policies you need to know as a data consumer.
 
-**Example**
 
-```
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+Realtime Bulk Quotes Premium
+
+This API returns realtime quotes for US-traded symbols in bulk, accepting up to 100 symbols per API request and covering both regular and extended (pre-market and post-market) trading hours. You can use this endpoint as a high-throughput alternative to the Global Quote API, which accepts one symbol per API request.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=REALTIME_BULK_QUOTES
+
+❚ Required: symbol
+
+Up to 100 symbols separated by comma. For example: symbol=MSFT,AAPL,IBM. If more than 100 symbols are provided, only the first 100 symbols will be honored as part of the API input.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the search results in JSON format; csv returns the search results as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=MSFT,AAPL,IBM&apikey=demo
+
+
+💡 Tip: this is a premium API function. Please subscribe to any premium membership plan that mentions "Realtime US Market Data" in its description to unlock this endpoint for your personal use. For commercial use, please contact sales.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=MSFT,AAPL,IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+Search Endpoint Utility
+
+Looking for some specific symbols or companies? Trying to build an auto-complete search box similar to the one below?
+
+The stock symbol search API powers an auto-complete ticker search experience
+
+
+We've got you covered! The Search Endpoint returns the best-matching symbols and market information based on keywords of your choice. The search results also contain match scores that provide you with the full flexibility to develop your own search and filtering logic.
+
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=SYMBOL_SEARCH
+
+❚ Required: keywords
+
+A text string of your choice. For example: keywords=microsoft.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the search results in JSON format; csv returns the search results as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=tesco&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=tencent&apikey=demo
 
-## <a id="market_status"></a> **MARKET_STATUS**
+https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=BA&apikey=demo
 
-Global open/closed market status.
+https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=SAIC&apikey=demo
 
-**Parameters**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=BA&apikey=demo&datatype=csv
 
-* `function`: `MARKET_STATUS`
-* `apikey` (required)
 
-**Example**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-```
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=tesco&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+Global Market Open & Close Status Utility
+
+This endpoint returns the current market status (open vs. closed) of major trading venues for equities, forex, and cryptocurrencies around the world.
+
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=MARKET_STATUS
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=demo
-```
 
----
 
-# **2. Options Data**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-## <a id="historical_options"></a> **HISTORICAL_OPTIONS**
+print(data)
 
-Full historical US options chain, including IV + Greeks, from 2008 onward.
+Options Data APIs
+This suite of APIs provide realtime and historical US options data, spanning 15+ years of history with full market/volume coverage.
 
-**Parameters**
 
-* `function`: `HISTORICAL_OPTIONS`
-* `symbol` (required)
-* `date` (optional): YYYY-MM-DD; defaults to previous trading day
-* `datatype`: `json` | `csv`
-* `apikey` (required)
+Realtime Options Trending Premium
 
-**Examples**
+This API returns realtime US options data with full market coverage. Option chains are sorted by expiration dates in chronological order. Within the same expiration date, contracts are sorted by strike prices from low to high.
 
-```
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=REALTIME_OPTIONS
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: require_greeks
+
+Enable greeks & implied volatility (IV) fields. By default, require_greeks=false. Set require_greeks=true to enable greeks & IVs in the API response.
+
+❚ Optional: contract
+
+The US options contract ID you would like to specify. By default, the contract parameter is not set and the entire option chain for a given symbol will be returned.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the options data in JSON format; csv returns the data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+By default, the entire realtime option chain is returned
+https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=IBM&apikey=demo
+
+Set require_greeks=true to enable greeks & implied volatility (IV) fields in the API response
+https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=IBM&require_greeks=true&apikey=demo
+
+Query a specific contract (instead of the entire option chain) with greeks & IVs enabled
+https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=IBM&require_greeks=true&contract=IBM270115C00390000&apikey=demo
+
+
+💡 Tip: this is a premium API function. Subscribe to either the 600 requests per minute or the 1200 requests per minute premium membership plan to unlock realtime options data.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+Historical Options Trending
+
+This API returns the full historical options chain for a specific symbol on a specific date, covering 15+ years of history. Implied volatility (IV) and common Greeks (e.g., delta, gamma, theta, vega, rho) are also returned. Option chains are sorted by expiration dates in chronological order. Within the same expiration date, contracts are sorted by strike prices from low to high.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=HISTORICAL_OPTIONS
+
+❚ Required: symbol
+
+The name of the equity of your choice. For example: symbol=IBM
+
+❚ Optional: date
+
+By default, the date parameter is not set and the API will return data for the previous trading session. Any date later than 2008-01-01 is accepted. For example, date=2017-11-15.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the options data in JSON format; csv returns the data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+When the date parameter is not set, data from the previous trading session is returned
 https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=IBM&apikey=demo
+
+Specify a date to retrieve options data for any trading day in the past 15+ years (since 2008-01-01)
 https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=IBM&date=2017-11-15&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=IBM&date=2017-11-15&apikey=demo&datatype=csv
 
-# **3. Alpha Intelligence**
 
----
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-## <a id="news_sentiment"></a> **NEWS_SENTIMENT**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-Realtime + historical market news enriched with sentiment scores.
+print(data)
 
-**Parameters**
+Alpha Intelligence™
+The APIs in this section contain advanced market intelligence built with our decades of expertise in AI, machine learning, and quantitative finance. We hope these highly differentiated alternative datasets can help turbocharge your trading strategy, market research, and financial software application to the next level.
 
-* `function`: `NEWS_SENTIMENT`
-* `tickers` (optional): comma-separated symbols
-* `topics` (optional)
-* `time_from` (optional): `YYYYMMDDTHHMM`
-* `time_to` (optional)
-* `sort` (optional): `LATEST` (default) | `EARLIEST` | `RELEVANCE`
-* `limit` (optional): up to 1000
-* `apikey` (required)
 
-**Examples**
+Market News & Sentiment Trending
+Looking for market news data to train your LLM models or to augment your trading strategy? You have just found it. This API returns live and historical market news & sentiment data from a large & growing selection of premier news outlets around the world, covering stocks, cryptocurrencies, forex, and a wide range of topics such as fiscal policy, mergers & acquisitions, IPOs, etc. This API, combined with our core stock API, fundamental data, and technical indicator APIs, can provide you with a 360-degree view of the financial market and the broader economy.
 
-```
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=NEWS_SENTIMENT
+
+❚ Optional: tickers
+
+The stock/crypto/forex symbols of your choice. For example: tickers=IBM will filter for articles that mention the IBM ticker; tickers=COIN,CRYPTO:BTC,FOREX:USD will filter for articles that simultaneously mention Coinbase (COIN), Bitcoin (CRYPTO:BTC), and US Dollar (FOREX:USD) in their content.
+
+❚ Optional: topics
+
+The news topics of your choice. For example: topics=technology will filter for articles that write about the technology sector; topics=technology,ipo will filter for articles that simultaneously cover technology and IPO in their content. Below is the full list of supported topics:
+
+Blockchain: blockchain
+Earnings: earnings
+IPO: ipo
+Mergers & Acquisitions: mergers_and_acquisitions
+Financial Markets: financial_markets
+Economy - Fiscal Policy (e.g., tax reform, government spending): economy_fiscal
+Economy - Monetary Policy (e.g., interest rates, inflation): economy_monetary
+Economy - Macro/Overall: economy_macro
+Energy & Transportation: energy_transportation
+Finance: finance
+Life Sciences: life_sciences
+Manufacturing: manufacturing
+Real Estate & Construction: real_estate
+Retail & Wholesale: retail_wholesale
+Technology: technology
+❚ Optional: time_from and time_to
+
+The time range of the news articles you are targeting, in YYYYMMDDTHHMM format. For example: time_from=20220410T0130. If time_from is specified but time_to is missing, the API will return articles published between the time_from value and the current time.
+
+❚ Optional: sort
+
+By default, sort=LATEST and the API will return the latest articles first. You can also set sort=EARLIEST or sort=RELEVANCE based on your use case.
+
+❚ Optional: limit
+
+By default, limit=50 and the API will return up to 50 matching results. You can also set limit=1000 to output up to 1000 results.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Querying news articles that mention the AAPL ticker.
 https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo
+
+Querying news articles that simultaneously mention the Coinbase stock (COIN), Bitcoin (CRYPTO:BTC), and US Dollar (FOREX:USD) and are published on or after 2022-04-10, 1:30am UTC.
 https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=COIN,CRYPTO:BTC,FOREX:USD&time_from=20220410T0130&limit=1000&apikey=demo
-```
 
----
 
-## <a id="earnings_call_transcript"></a> **EARNINGS_CALL_TRANSCRIPT**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Official earnings call transcript for a specific company + quarter.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `EARNINGS_CALL_TRANSCRIPT`
-* `symbol` (required)
-* `quarter` (required): e.g., `2024Q1`
-* `apikey` (required)
+Earnings Call Transcript Trending
+This API returns the earnings call transcript for a given company in a specific quarter, covering over 15 years of history and enriched with LLM-based sentiment signals.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=EARNINGS_CALL_TRANSCRIPT
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: quarter
+
+Fiscal quarter in YYYYQM format. For example: quarter=2024Q1. Any quarter since 2010Q1 is supported.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=EARNINGS_CALL_TRANSCRIPT&symbol=IBM&quarter=2024Q1&apikey=demo
-```
 
----
 
-## <a id="top_gainers_losers"></a> **TOP_GAINERS_LOSERS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Top 20 US market gainers, losers, and most-active.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=EARNINGS_CALL_TRANSCRIPT&symbol=IBM&quarter=2024Q1&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `TOP_GAINERS_LOSERS`
-* `apikey` (required)
+Top Gainers, Losers, and Most Actively Traded Tickers (US Market)
 
-**Example**
+This endpoint returns the top 20 gainers, losers, and the most active traded tickers in the US market.
 
-```
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=TOP_GAINERS_LOSERS
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=demo
-```
 
----
 
-## <a id="insider_transactions"></a> **INSIDER_TRANSACTIONS**
+💡 Tip: By default, the top gainers, losers, and the most active traded ticker information is updated at the end of each trading day for all users. If you would like to access realtime or 15-minute delayed data, please subscribe to a premium membership plan for your personal use. For commercial use, please contact sales.
 
-Latest and historical insider trades for a public company.
+* Realtime and 15-minute delayed US market data is regulated by the stock exchanges, FINRA, and the SEC. Learn more about the key market data policies you need to know as a data consumer.
 
-**Parameters**
 
-* `function`: `INSIDER_TRANSACTIONS`
-* `symbol` (required)
-* `apikey` (required)
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Example**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-```
+print(data)
+
+Insider Transactions Trending
+This API returns the latest and historical insider transactions made by key stakeholders (e.g., founders, executives, board members, etc.) of a specific company.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=INSIDER_TRANSACTIONS
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=INSIDER_TRANSACTIONS&symbol=IBM&apikey=demo
-```
 
----
 
-# **4. Advanced Analytics**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=INSIDER_TRANSACTIONS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-## <a id="analytics_fixed_window"></a> **ANALYTICS_FIXED_WINDOW**
+print(data)
 
-Fixed-window statistical analytics (mean, variance, correlation, etc.).
+Advanced Analytics (Fixed Window)
+This endpoint returns a rich set of advanced analytics metrics (e.g., total return, variance, auto-correlation, etc.) for a given time series over a fixed temporal window.
 
-**Parameters**
 
-* `function`: `ANALYTICS_FIXED_WINDOW`
-* `SYMBOLS` (required): comma-separated symbols
-* `RANGE` (required):
+API Parameters
+❚ Required: function
 
-  * `full`
-  * `{N}day|{N}week|{N}month|{N}year`
-  * or specific date range via two `RANGE` params
-* `OHLC` (optional): `open` `high` `low` `close`
-* `INTERVAL` (required): `1min` `5min` `15min` `30min` `60min` `DAILY` `WEEKLY` `MONTHLY`
-* `CALCULATIONS` (required): one or more metrics
-* `apikey` (required)
+The function of your choice. In this case, function=ANALYTICS_FIXED_WINDOW
 
-**Example**
+❚ Required: SYMBOLS
 
-```
-https://www.alphavantage.co/query?function=ANALYTICS_FIXED_WINDOW&SYMBOLS=AAPL,MSFT,IBM&RANGE=2023-07-01&RANGE=2023-08-31&INTERVAL=DAILY&CALCULATIONS=MEAN,STDDEV,CORRELATION&apikey=demo
-```
+A list of symbols for the calculation. It can be a comma separated list of symbols as a string. Free API keys can specify up to 5 symbols per API request. Premium API keys can specify up to 50 symbols per API request.
 
----
+❚ Required: RANGE
 
-## <a id="analytics_sliding_window"></a> **ANALYTICS_SLIDING_WINDOW**
+This is the date range for the series being requested. By default, the date range is the full set of data for the equity history. This can be further modified by the LIMIT variable.
 
-Sliding-window (rolling) analytics.
+RANGE can take certain text values as inputs. They are:
 
-**Parameters**
+full
+{N}day
+{N}week
+{N}month
+{N}year
+For intraday time series, the following RANGE values are also accepted:
 
-* `function`: `ANALYTICS_SLIDING_WINDOW`
-* `SYMBOLS` (required)
-* `RANGE` (required)
-* `OHLC` (optional)
-* `INTERVAL` (required)
-* `WINDOW_SIZE` (required): ≥10
-* `CALCULATIONS` (required)
-* `apikey` (required)
+{N}minute
+{N}hour
+Aside from the “full” value which represents the entire time series, the other values specify an interval to return the series for as measured backwards from the current date/time.
 
-**Example**
+To specify start & end dates for your analytics calcuation, simply add two RANGE parameters in your API request. For example: RANGE=2023-07-01&RANGE=2023-08-31 or RANGE=2020-12-01T00:04:00&RANGE=2020-12-06T23:59:59 with minute-level precision for intraday analytics. If the end date is missing, the end date is assumed to be the last trading date. In addition, you can request a full month of data by using YYYY-MM format like 2020-12. One day of intraday data can be requested by using YYYY-MM-DD format like 2020-12-06
 
-```
-https://www.alphavantage.co/query?function=ANALYTICS_SLIDING_WINDOW&SYMBOLS=AAPL,IBM&RANGE=2month&INTERVAL=DAILY&WINDOW_SIZE=20&CALCULATIONS=MEAN&apikey=demo
-```
+❚ Optional: OHLC
 
----
+This allows you to choose which open, high, low, or close field the calculation will be performed on. By default, OHLC=close. Valid values for these fields are open, high, low, close.
 
-# **5. Fundamental Data**
+❚ Required: INTERVAL
 
----
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, DAILY, WEEKLY, MONTHLY.
 
-## <a id="overview"></a> **OVERVIEW**
+❚ Required: CALCULATIONS
 
-Company-level financial profile & ratios.
+A comma separated list of the analytics metrics you would like to calculate:
 
-**Parameters**
+MIN: The minimum return (largest negative or smallest positive) for all values in the series
+MAX: The maximum return for all values in the series
+MEAN: The mean of all returns in the series
+MEDIAN: The median of all returns in the series
+CUMULATIVE_RETURN: The total return from the beginning to the end of the series range
+VARIANCE: The population variance of returns in the series range. Optionally, you can use VARIANCE(annualized=True)to normalize the output to an annual value. By default, the variance is not annualized.
+STDDEV: The population standard deviation of returns in the series range for each symbol. Optionally, you can use STDDEV(annualized=True)to normalize the output to an annual value. By default, the standard deviation is not annualized.
+MAX_DRAWDOWN: Largest peak to trough interval for each symbol in the series range
+HISTOGRAM: For each symbol, place the observed total returns in bins. By default, bins=10. Use HISTOGRAM(bins=20) to specify a custom bin value (e.g., 20).
+AUTOCORRELATION: For each symbol place, calculate the autocorrelation for the given lag (e.g., the lag in neighboring points for the autocorrelation calculation). By default, lag=1. Use AUTOCORRELATION(lag=2) to specify a custom lag value (e.g., 2).
+COVARIANCE: Returns a covariance matrix for the input symbols. Optionally, you can use COVARIANCE(annualized=True)to normalize the output to an annual value. By default, the covariance is not annualized.
+CORRELATION: Returns a correlation matrix for the input symbols, using the PEARSON method as default. You can also specify the KENDALL or SPEARMAN method through CORRELATION(method=KENDALL) or CORRELATION(method=SPEARMAN), respectively.
+❚ Required: apikey
 
-* `function`: `OVERVIEW`
-* `symbol` (required)
-* `apikey` (required)
+Your API key. Claim your free API key here.
 
-**Example**
 
-```
+Examples (click for JSON output)
+For AAPL, MSFT, and IBM, calculate the mean & standard deviation of their returns based on daily close prices between 2023-07-01 and 2023-08-31, along with a correlation matrix among the three tickers.
+https://www.alphavantage.co/query?function=ANALYTICS_FIXED_WINDOW&SYMBOLS=AAPL,MSFT,IBM&RANGE=2023-07-01&RANGE=2023-08-31&INTERVAL=DAILY&OHLC=close&CALCULATIONS=MEAN,STDDEV,CORRELATION&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://alphavantageapi.co/timeseries/analytics?SYMBOLS=AAPL,MSFT,IBM&RANGE=2023-07-01&RANGE=2023-08-31&INTERVAL=DAILY&OHLC=close&CALCULATIONS=MEAN,STDDEV,CORRELATION&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+Advanced Analytics (Sliding Window) Trending
+This endpoint returns a rich set of advanced analytics metrics (e.g., total return, variance, auto-correlation, etc.) for a given time series over sliding time windows. For example, we can calculate a moving variance over 5 years with a window of 100 points to see how the variance changes over time.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=ANALYTICS_SLIDING_WINDOW
+
+❚ Required: SYMBOLS
+
+A list of symbols for the calculation. It can be a comma separated list of symbols as a string. Free API keys can specify up to 5 symbols per API request. Premium API keys can specify up to 50 symbols per API request.
+
+❚ Required: RANGE
+
+This is the date range for the series being requested. By default, the date range is the full set of data for the equity history. This can be further modified by the LIMIT variable.
+
+RANGE can take certain text values as inputs. They are:
+
+full
+{N}day
+{N}week
+{N}month
+{N}year
+For intraday time series, the following RANGE values are also accepted:
+
+{N}minute
+{N}hour
+Aside from the “full” value which represents the entire time series, the other values specify an interval to return the series for as measured backwards from the current date/time.
+
+To specify start & end dates for your analytics calcuation, simply add two RANGE parameters in your API request. For example: RANGE=2023-07-01&RANGE=2023-08-31 or RANGE=2020-12-01T00:04:00&RANGE=2020-12-06T23:59:59 with minute-level precision for intraday analytics. If the end date is missing, the end date is assumed to be the last trading date. In addition, you can request a full month of data by using YYYY-MM format like 2020-12. One day of intraday data can be requested by using YYYY-MM-DD format like 2020-12-06
+
+❚ Optional: OHLC
+
+This allows you to choose which open, high, low, or close field the calculation will be performed on. By default, OHLC=close. Valid values for these fields are open, high, low, close.
+
+❚ Required: INTERVAL
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, DAILY, WEEKLY, MONTHLY.
+
+❚ Required: WINDOW_SIZE
+
+An integer representing the size of the moving window. A hard lower boundary of 10 has been set though it is recommended to make this window larger to make sure the running calculations are statistically significant.
+
+❚ Required: CALCULATIONS
+
+A comma separated list of the analytics metrics you would like to calculate. Free API keys can specify 1 metric to be calculated per API request. Premium API keys can specify multiple metrics to be calculated simultaneously per API request.
+
+MEAN: The mean of all returns in the series
+MEDIAN: The median of all returns in the series
+CUMULATIVE_RETURN: The total return from the beginning to the end of the series range
+VARIANCE: The population variance of returns in the series range. Optionally, you can use VARIANCE(annualized=True)to normalize the output to an annual value. By default, the variance is not annualized.
+STDDEV: The population standard deviation of returns in the series range for each symbol. Optionally, you can use STDDEV(annualized=True)to normalize the output to an annual value. By default, the standard deviation is not annualized.
+COVARIANCE: Returns a covariance matrix for the input symbols. Optionally, you can use COVARIANCE(annualized=True)to normalize the output to an annual value. By default, the covariance is not annualized.
+CORRELATION: Returns a correlation matrix for the input symbols, using the PEARSON method as default. You can also specify the KENDALL or SPEARMAN method through CORRELATION(method=KENDALL) or CORRELATION(method=SPEARMAN), respectively.
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+For AAPL and IBM, calculate the running mean & annualized standard deviation of their returns based on daily close prices in the trailing 2 months, with a sliding window size of 20.
+https://www.alphavantage.co/query?function=ANALYTICS_SLIDING_WINDOW&SYMBOLS=AAPL,IBM&RANGE=2month&INTERVAL=DAILY&OHLC=close&WINDOW_SIZE=20&CALCULATIONS=MEAN,STDDEV(annualized=True)&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://alphavantageapi.co/timeseries/running_analytics?SYMBOLS=AAPL,IBM&RANGE=2month&INTERVAL=DAILY&OHLC=close&WINDOW_SIZE=20&CALCULATIONS=MEAN,STDDEV(annualized=True)&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+
+Fundamental Data
+We offer the following set of fundamental data APIs in various temporal dimensions covering key financial metrics, income statements, balance sheets, cash flow, and other fundamental data points.
+
+
+Company Overview Trending
+This API returns the company information, financial ratios, and other key metrics for the equity specified. Data is generally refreshed on the same day a company reports its latest earnings and financials.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=OVERVIEW
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="etf_profile"></a> **ETF_PROFILE**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-ETF characteristics + holdings.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `ETF_PROFILE`
-* `symbol` (required)
-* `apikey` (required)
+ETF Profile & Holdings
+This API returns key ETF metrics (e.g., net assets, expense ratio, and turnover), along with the corresponding ETF holdings / constituents with allocation by asset types and sectors.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=ETF_PROFILE
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=QQQ.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=ETF_PROFILE&symbol=QQQ&apikey=demo
-```
 
----
 
-## <a id="dividends"></a> **DIVIDENDS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Historical + scheduled dividends.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ETF_PROFILE&symbol=QQQ&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `DIVIDENDS`
-* `symbol` (required)
-* `datatype` (optional)
-* `apikey` (required)
+Corporate Action - Dividends
+This API returns historical and future (declared) dividend distributions.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=DIVIDENDS
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the options data in JSON format; csv returns the data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=DIVIDENDS&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="splits"></a> **SPLITS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Historical split events.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DIVIDENDS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `SPLITS`
-* `symbol` (required)
-* `datatype` (optional)
-* `apikey` (required)
+Corporate Action - Splits
+This API returns historical split events.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=SPLITS
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the options data in JSON format; csv returns the data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=SPLITS&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="income_statement"></a> **INCOME_STATEMENT**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Annual & quarterly income statements.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SPLITS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `INCOME_STATEMENT`
-* `symbol` (required)
-* `apikey` (required)
+INCOME_STATEMENT
+This API returns the annual and quarterly income statements for the company of interest, with normalized fields mapped to GAAP and IFRS taxonomies of the SEC. Data is generally refreshed on the same day a company reports its latest earnings and financials.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=INCOME_STATEMENT
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example - annual & quarterly income statements for IBM (click for JSON output)
 https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="balance_sheet"></a> **BALANCE_SHEET**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Annual & quarterly balance sheets.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `BALANCE_SHEET`
-* `symbol` (required)
-* `apikey` (required)
+BALANCE_SHEET
+This API returns the annual and quarterly balance sheets for the company of interest, with normalized fields mapped to GAAP and IFRS taxonomies of the SEC. Data is generally refreshed on the same day a company reports its latest earnings and financials.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=BALANCE_SHEET
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example - annual & quarterly balance sheets for IBM (click for JSON output)
 https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="cash_flow"></a> **CASH_FLOW**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Annual & quarterly cash flow statements.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `CASH_FLOW`
-* `symbol` (required)
-* `apikey` (required)
+CASH_FLOW
+This API returns the annual and quarterly cash flow for the company of interest, with normalized fields mapped to GAAP and IFRS taxonomies of the SEC. Data is generally refreshed on the same day a company reports its latest earnings and financials.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=CASH_FLOW
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example - annual & quarterly cash flows for IBM (click for JSON output)
 https://www.alphavantage.co/query?function=CASH_FLOW&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="shares_outstanding"></a> **SHARES_OUTSTANDING**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Quarterly diluted + basic shares outstanding.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CASH_FLOW&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `SHARES_OUTSTANDING`
-* `symbol` (required)
-* `datatype` (optional)
-* `apikey` (required)
+SHARES_OUTSTANDING
+This API returns the quarterly numbers of shares outstanding for the company of interest, with both diluted and basic shares outstanding values returned. Data is generally refreshed on the same day a company reports its latest earnings and financials.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=SHARES_OUTSTANDING
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=MSFT.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the options data in JSON format; csv returns the data as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=SHARES_OUTSTANDING&symbol=MSFT&apikey=demo
-```
 
----
 
-## <a id="earnings"></a> **EARNINGS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Annual & quarterly EPS; quarterly surprise data.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SHARES_OUTSTANDING&symbol=MSFT&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `EARNINGS`
-* `symbol` (required)
-* `apikey` (required)
+Earnings History
+This API returns the annual and quarterly earnings (EPS) for the company of interest. Quarterly data also includes analyst estimates and surprise metrics.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=EARNINGS
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=EARNINGS&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="earnings_estimates"></a> **EARNINGS_ESTIMATES**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Forward annual & quarterly EPS + revenue estimates.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=EARNINGS&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `EARNINGS_ESTIMATES`
-* `symbol` (required)
-* `apikey` (required)
+Earnings Estimates Trending
+This API returns the annual and quarterly EPS and revenue estimates for the company of interest, along with analyst count and revision history.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=EARNINGS_ESTIMATES
+
+❚ Required: symbol
+
+The symbol of the ticker of your choice. For example: symbol=IBM.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=EARNINGS_ESTIMATES&symbol=IBM&apikey=demo
-```
 
----
 
-## <a id="listing_status"></a> **LISTING_STATUS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Active or delisted US equities (CSV).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=EARNINGS_ESTIMATES&symbol=IBM&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `LISTING_STATUS`
-* `date` (optional)
-* `state` (optional): `active` | `delisted`
-* `apikey` (required)
+Listing & Delisting Status
 
-**Examples**
+This API returns a list of active or delisted US stocks and ETFs, either as of the latest trading day or at a specific time in history. The endpoint is positioned to facilitate equity research on asset lifecycle and survivorship.
 
-```
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=LISTING_STATUS
+
+❚ Optional: date
+
+If no date is set, the API endpoint will return a list of active or delisted symbols as of the latest trading day. If a date is set, the API endpoint will "travel back" in time and return a list of active or delisted symbols on that particular date in history. Any YYYY-MM-DD date later than 2010-01-01 is supported. For example, date=2013-08-03
+
+❚ Optional: state
+
+By default, state=active and the API will return a list of actively traded stocks and ETFs. Set state=delisted to query a list of delisted assets.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples
+To ensure optimal API response time, this endpoint uses the CSV format which is more memory-efficient than JSON.
+
+Querying all active stocks and ETFs as of the latest trading day:
 https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=demo
+
+Querying all delisted stocks and ETFs as of 2014-07-10:
 https://www.alphavantage.co/query?function=LISTING_STATUS&date=2014-07-10&state=delisted&apikey=demo
-```
 
----
 
-## <a id="earnings_calendar"></a> **EARNINGS_CALENDAR**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import csv
+import requests
 
-Upcoming earnings (3/6/12 months).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+CSV_URL = 'https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=demo'
 
-**Parameters**
+with requests.Session() as s:
+    download = s.get(CSV_URL)
+    decoded_content = download.content.decode('utf-8')
+    cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+    my_list = list(cr)
+    for row in my_list:
+        print(row)
 
-* `function`: `EARNINGS_CALENDAR`
-* `symbol` (optional)
-* `horizon`: `3month` | `6month` | `12month`
-* `apikey` (required)
+Earnings Calendar
 
-**Example**
+This API returns a list of company earnings expected in the next 3, 6, or 12 months.
 
-```
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=EARNINGS_CALENDAR
+
+❚ Optional: symbol
+
+By default, no symbol will be set for this API. When no symbol is set, the API endpoint will return the full list of company earnings scheduled. If a symbol is set, the API endpoint will return the expected earnings for that specific symbol. For example, symbol=IBM
+
+❚ Optional: horizon
+
+By default, horizon=3month and the API will return a list of expected company earnings in the next 3 months. You may set horizon=6month or horizon=12month to query the earnings scheduled for the next 6 months or 12 months, respectively.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples
+To ensure optimal API response time, this endpoint uses the CSV format which is more memory-efficient than JSON.
+
+Querying all the company earnings expected in the next 3 months:
 https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=demo
-```
 
----
+Querying all the earnings events for IBM in the next 12 months:
+https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&symbol=IBM&horizon=12month&apikey=demo
 
-## <a id="ipo_calendar"></a> **IPO_CALENDAR**
 
-Upcoming IPOs (next 3 months).
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import csv
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+CSV_URL = 'https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=demo'
 
-* `function`: `IPO_CALENDAR`
-* `apikey` (required)
+with requests.Session() as s:
+    download = s.get(CSV_URL)
+    decoded_content = download.content.decode('utf-8')
+    cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+    my_list = list(cr)
+    for row in my_list:
+        print(row)
 
-**Example**
+IPO Calendar
 
-```
+This API returns a list of IPOs expected in the next 3 months.
+
+
+API Parameters
+❚ Required: function
+
+The API function of your choice. In this case, function=IPO_CALENDAR
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples
+To ensure optimal API response time, this endpoint uses the CSV format which is more memory-efficient than JSON.
+
+Querying all the IPOs expected in the next 3 months:
 https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=demo
-```
 
----
 
-# **6. Foreign Exchange (FX)**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import csv
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+CSV_URL = 'https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=demo'
 
-## <a id="currency_exchange_rate"></a> **CURRENCY_EXCHANGE_RATE**
+with requests.Session() as s:
+    download = s.get(CSV_URL)
+    decoded_content = download.content.decode('utf-8')
+    cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+    my_list = list(cr)
+    for row in my_list:
+        print(row)
 
-Realtime FX or crypto–to–fiat exchange rate.
+Foreign Exchange Rates (FX)
+APIs under this section provide a wide range of data feed for realtime and historical forex (FX) rates.
 
-**Parameters**
 
-* `function`: `CURRENCY_EXCHANGE_RATE`
-* `from_currency` (required)
-* `to_currency` (required)
-* `apikey` (required)
+CURRENCY_EXCHANGE_RATE Trending
 
-**Examples**
+This API returns the realtime exchange rate for a pair of cryptocurrency (e.g., Bitcoin) and physical currency (e.g., USD).
 
-```
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=CURRENCY_EXCHANGE_RATE
+
+❚ Required: from_currency
+
+The currency you would like to get the exchange rate for. It can either be a physical currency or cryptocurrency. For example: from_currency=USD or from_currency=BTC.
+
+❚ Required: to_currency
+
+The destination currency for the exchange rate. It can either be a physical currency or cryptocurrency. For example: to_currency=USD or to_currency=BTC.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+US Dollar to Japanese Yen:
 https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey=demo
+
+Bitcoin to Euro:
 https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=BTC&to_currency=EUR&apikey=demo
-```
 
----
 
-## <a id="fx_daily"></a> **FX_DAILY**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Daily OHLC FX data.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `FX_DAILY`
-* `from_symbol` (required)
-* `to_symbol` (required)
-* `outputsize` (optional): `compact` | `full`
-* `datatype` (optional)
-* `apikey` (required)
+FX_INTRADAY Premium Trending
 
-**Example**
+This API returns intraday time series (timestamp, open, high, low, close) of the FX currency pair specified, updated realtime.
 
-```
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=FX_INTRADAY
+
+❚ Required: from_symbol
+
+A three-letter symbol from the forex currency list. For example: from_symbol=EUR
+
+❚ Required: to_symbol
+
+A three-letter symbol from the forex currency list. For example: to_symbol=USD
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min
+
+❚ Optional: outputsize
+
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points in the intraday time series; full returns the full-length intraday time series. The "compact" option is recommended if you would like to reduce the data size of each API call.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the intraday time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&apikey=demo
+
+https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&outputsize=full&apikey=demo
+
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&apikey=demo&datatype=csv
+
+
+💡 Tip: this is a premium API function. Subscribe to a premium membership plan to instantly unlock all premium APIs.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=5min&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+FX_DAILY
+
+This API returns the daily time series (timestamp, open, high, low, close) of the FX currency pair specified, updated realtime.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=FX_DAILY
+
+❚ Required: from_symbol
+
+A three-letter symbol from the forex currency list. For example: from_symbol=EUR
+
+❚ Required: to_symbol
+
+A three-letter symbol from the forex currency list. For example: to_symbol=USD
+
+❚ Optional: outputsize
+
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points in the daily time series; full returns the full-length daily time series. The "compact" option is recommended if you would like to reduce the data size of each API call.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=EUR&to_symbol=USD&apikey=demo
-```
 
----
+https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=EUR&to_symbol=USD&outputsize=full&apikey=demo
 
-## <a id="fx_weekly"></a> **FX_WEEKLY**
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=EUR&to_symbol=USD&apikey=demo&datatype=csv
 
-Weekly OHLC FX data (latest week updates intraday).
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `FX_WEEKLY`
-* `from_symbol` (required)
-* `to_symbol` (required)
-* `datatype` (optional)
-* `apikey` (required)
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=EUR&to_symbol=USD&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+FX_WEEKLY
+
+This API returns the weekly time series (timestamp, open, high, low, close) of the FX currency pair specified, updated realtime.
+
+The latest data point is the price information for the week (or partial week) containing the current trading day, updated realtime.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=FX_WEEKLY
+
+❚ Required: from_symbol
+
+A three-letter symbol from the forex currency list. For example: from_symbol=EUR
+
+❚ Required: to_symbol
+
+A three-letter symbol from the forex currency list. For example: to_symbol=USD
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the weekly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=FX_WEEKLY&from_symbol=EUR&to_symbol=USD&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=FX_WEEKLY&from_symbol=EUR&to_symbol=USD&apikey=demo&datatype=csv
 
-## <a id="fx_monthly"></a> **FX_MONTHLY**
 
-Monthly OHLC FX data.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=FX_WEEKLY&from_symbol=EUR&to_symbol=USD&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `FX_MONTHLY`
-* `from_symbol` (required)
-* `to_symbol` (required)
-* `datatype` (optional)
-* `apikey` (required)
+print(data)
 
-**Example**
+FX_MONTHLY
 
-```
+This API returns the monthly time series (timestamp, open, high, low, close) of the FX currency pair specified, updated realtime.
+
+The latest data point is the prices information for the month (or partial month) containing the current trading day, updated realtime.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=FX_MONTHLY
+
+❚ Required: from_symbol
+
+A three-letter symbol from the forex currency list. For example: from_symbol=EUR
+
+❚ Required: to_symbol
+
+A three-letter symbol from the forex currency list. For example: to_symbol=USD
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the monthly time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol=USD&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol=USD&apikey=demo&datatype=csv
 
-# **7. Digital & Crypto Currencies**
 
----
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-## <a id="digital_currency_daily"></a> **DIGITAL_CURRENCY_DAILY**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=FX_MONTHLY&from_symbol=EUR&to_symbol=USD&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-Daily crypto OHLCV, denominated in both the target market currency and USD.
+print(data)
 
-**Parameters**
+Digital & Crypto Currencies
+APIs under this section provide a wide range of data feed for digital and crypto currencies such as Bitcoin.
 
-* `function`: `DIGITAL_CURRENCY_DAILY`
-* `symbol` (required): crypto (e.g., BTC, ETH)
-* `market` (required): market currency (e.g., USD, EUR)
-* `apikey` (required)
 
-**Example**
+CURRENCY_EXCHANGE_RATE Trending
 
-```
+This API returns the realtime exchange rate for any pair of cryptocurrency (e.g., Bitcoin) or physical currency (e.g., USD).
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=CURRENCY_EXCHANGE_RATE
+
+❚ Required: from_currency
+
+The currency you would like to get the exchange rate for. It can either be a physical currency or cryptocurrency. For example: from_currency=USD or from_currency=BTC.
+
+❚ Required: to_currency
+
+The destination currency for the exchange rate. It can either be a physical currency or cryptocurrency. For example: to_currency=USD or to_currency=BTC.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Bitcoin to Euro:
+https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=BTC&to_currency=EUR&apikey=demo
+
+US Dollar to Japanese Yen:
+https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=BTC&to_currency=EUR&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+CRYPTO_INTRADAY Trending Premium
+
+This API returns intraday time series (timestamp, open, high, low, close, volume) of the cryptocurrency specified, updated realtime.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=CRYPTO_INTRADAY
+
+❚ Required: symbol
+
+The cryptocurrency of your choice. It can be any of the "from" currencies in the cryptocurrency list. For example: symbol=ETH.
+
+❚ Required: market
+
+The exchange market of your choice. It can be any of the "to" currencies in the cryptocurrency list. For example: market=USD.
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min
+
+❚ Optional: outputsize
+
+By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points in the intraday time series; full returns the full-length intraday time series. The "compact" option is recommended if you would like to reduce the data size of each API call.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the intraday time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=ETH&market=USD&interval=5min&apikey=demo
+
+https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=ETH&market=USD&interval=5min&outputsize=full&apikey=demo
+
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=ETH&market=USD&interval=5min&apikey=demo&datatype=csv
+
+
+💡 Tip: this is a premium API function. Subscribe to a premium membership plan to instantly unlock all premium APIs.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=ETH&market=USD&interval=5min&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+DIGITAL_CURRENCY_DAILY
+
+This API returns the daily historical time series for a cryptocurrency (e.g., BTC) traded on a specific market (e.g., EUR/Euro), refreshed daily at midnight (UTC). Prices and volumes are quoted in both the market-specific currency and USD.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=DIGITAL_CURRENCY_DAILY
+
+❚ Required: symbol
+
+The cryptocurrency of your choice. It can be any of the "from" currencies in the cryptocurrency list. For example: symbol=BTC.
+
+❚ Required: market
+
+The exchange market of your choice. It can be any of the "to" currencies in the cryptocurrency list. For example: market=EUR.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=BTC&market=EUR&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=BTC&market=EUR&apikey=demo&datatype=csv
 
-## <a id="digital_currency_weekly"></a> **DIGITAL_CURRENCY_WEEKLY**
 
-Weekly crypto OHLCV in market currency + USD.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=BTC&market=EUR&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `DIGITAL_CURRENCY_WEEKLY`
-* `symbol` (required)
-* `market` (required)
-* `apikey` (required)
+print(data)
 
-**Example**
+DIGITAL_CURRENCY_WEEKLY Trending
 
-```
+This API returns the weekly historical time series for a cryptocurrency (e.g., BTC) traded on a specific market (e.g., EUR/Euro), refreshed daily at midnight (UTC). Prices and volumes are quoted in both the market-specific currency and USD.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=DIGITAL_CURRENCY_WEEKLY
+
+❚ Required: symbol
+
+The cryptocurrency of your choice. It can be any of the "from" currencies in the cryptocurrency list. For example: symbol=BTC.
+
+❚ Required: market
+
+The exchange market of your choice. It can be any of the "to" currencies in the cryptocurrency list. For example: market=EUR.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_WEEKLY&symbol=BTC&market=EUR&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_WEEKLY&symbol=BTC&market=EUR&apikey=demo&datatype=csv
 
-## <a id="digital_currency_monthly"></a> **DIGITAL_CURRENCY_MONTHLY**
 
-Monthly crypto OHLCV in market currency + USD.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_WEEKLY&symbol=BTC&market=EUR&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `DIGITAL_CURRENCY_MONTHLY`
-* `symbol` (required)
-* `market` (required)
-* `apikey` (required)
+print(data)
 
-**Example**
+DIGITAL_CURRENCY_MONTHLY Trending
 
-```
+This API returns the monthly historical time series for a cryptocurrency (e.g., BTC) traded on a specific market (e.g., EUR/Euro), refreshed daily at midnight (UTC). Prices and volumes are quoted in both the market-specific currency and USD.
+
+
+API Parameters
+❚ Required: function
+
+The time series of your choice. In this case, function=DIGITAL_CURRENCY_MONTHLY
+
+❚ Required: symbol
+
+The cryptocurrency of your choice. It can be any of the "from" currencies in the cryptocurrency list. For example: symbol=BTC.
+
+❚ Required: market
+
+The exchange market of your choice. It can be any of the "to" currencies in the cryptocurrency list. For example: market=EUR.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_MONTHLY&symbol=BTC&market=EUR&apikey=demo
-```
 
----
+Downloadable CSV file:
+https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_MONTHLY&symbol=BTC&market=EUR&apikey=demo&datatype=csv
 
-# **8. Commodities**
 
-Historical global commodity price series sourced from FRED/IMF.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_MONTHLY&symbol=BTC&market=EUR&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-## <a id="wti"></a> **WTI**
+print(data)
 
-West Texas Intermediate (US crude oil) price.
+Commodities
+APIs under this section provide historical data for major commodities such as crude oil, natural gas, copper, wheat, etc., spanning across various temporal horizons (daily, weekly, monthly, quarterly, etc.)
 
-**Parameters**
 
-* `function`: `WTI`
-* `interval` (optional): `daily` | `weekly` | `monthly` (default)
-* `datatype` (optional)
-* `apikey` (required)
+Crude Oil Prices: West Texas Intermediate (WTI) Trending
 
-**Example**
+This API returns the West Texas Intermediate (WTI) crude oil prices in daily, weekly, and monthly horizons.
 
-```
+Source: U.S. Energy Information Administration, Crude Oil Prices: West Texas Intermediate (WTI) - Cushing, Oklahoma, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=WTI
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings daily, weekly, and monthly are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=WTI&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="brent"></a> **BRENT**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Brent (European crude oil) benchmark price.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=WTI&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `BRENT`
-* `interval`: `daily` | `weekly` | `monthly`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Crude Oil Prices (Brent) Trending
 
-```
+This API returns the Brent (Europe) crude oil prices in daily, weekly, and monthly horizons.
+
+Source: U.S. Energy Information Administration, Crude Oil Prices: Brent - Europe, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=BRENT
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings daily, weekly, and monthly are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=BRENT&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="natural_gas"></a> **NATURAL_GAS**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Henry Hub natural gas spot price.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=BRENT&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `NATURAL_GAS`
-* `interval`: `daily` | `weekly` | `monthly`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Natural Gas
 
-```
+This API returns the Henry Hub natural gas spot prices in daily, weekly, and monthly horizons.
+
+Source: U.S. Energy Information Administration, Henry Hub Natural Gas Spot Price, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=NATURAL_GAS
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings daily, weekly, and monthly are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=NATURAL_GAS&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="copper"></a> **COPPER**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global copper price index (IMF).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=NATURAL_GAS&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `COPPER`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Copper Trending
 
-```
+This API returns the global price of copper in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Copper, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=COPPER
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=COPPER&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="aluminum"></a> **ALUMINUM**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global aluminum price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=COPPER&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `ALUMINUM`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Aluminum
 
-```
+This API returns the global price of aluminum in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Aluminum, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=ALUMINUM
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=ALUMINUM&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="wheat"></a> **WHEAT**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global wheat price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ALUMINUM&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `WHEAT`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Wheat
 
-```
+This API returns the global price of wheat in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Wheat, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=WHEAT
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=WHEAT&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="corn"></a> **CORN**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global corn price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=WHEAT&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `CORN`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Corn
 
-```
+This API returns the global price of corn in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Corn, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=CORN
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=CORN&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="cotton"></a> **COTTON**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global cotton price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CORN&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `COTTON`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Cotton
 
-```
+This API returns the global price of cotton in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Cotton, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=COTTON
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="sugar"></a> **SUGAR**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global sugar price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `SUGAR`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Sugar
 
-```
+This API returns the global price of sugar in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Sugar, No. 11, World, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=SUGAR
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=SUGAR&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="coffee"></a> **COFFEE**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Global coffee price index.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SUGAR&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `COFFEE`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price of Coffee
 
-```
+This API returns the global price of coffee in monthly, quarterly, and annual horizons.
+
+Source: International Monetary Fund (IMF Terms of Use), Global price of Coffee, Other Mild Arabica, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=COFFEE
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=COFFEE&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="all_commodities"></a> **ALL_COMMODITIES**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-IMF global index of overall commodity prices.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=COFFEE&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `ALL_COMMODITIES`
-* `interval`: `monthly` | `quarterly` | `annual`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+Global Price Index of All Commodities
 
-```
+This API returns the global price index of all commodities in monthly, quarterly, and annual temporal dimensions.
+
+Source: International Monetary Fund (IMF Terms of Use), Global Price Index of All Commodities, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=ALL_COMMODITIES
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly, quarterly, and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=ALL_COMMODITIES&interval=monthly&apikey=demo
-```
 
----
 
-# **9. Economic Indicators**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ALL_COMMODITIES&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-## <a id="real_gdp"></a> **REAL_GDP**
+print(data)
 
-US Real Gross Domestic Product (GDP), annual or quarterly.
+Economic Indicators
+APIs under this section provide key US economic indicators frequently used for investment strategy formulation and application development.
 
-**Parameters**
 
-* `function`: `REAL_GDP`
-* `interval` (optional): `annual` (default) | `quarterly`
-* `datatype` (optional)
-* `apikey` (required)
+REAL_GDP Trending
 
-**Example**
+This API returns the annual and quarterly Real GDP of the United States.
 
-```
+Source: U.S. Bureau of Economic Analysis, Real Gross Domestic Product, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=REAL_GDP
+
+❚ Optional: interval
+
+By default, interval=annual. Strings quarterly and annual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=REAL_GDP&interval=annual&apikey=demo
-```
 
----
 
-## <a id="real_gdp_per_capita"></a> **REAL_GDP_PER_CAPITA**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-US Real GDP per capita.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=REAL_GDP&interval=annual&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `REAL_GDP_PER_CAPITA`
-* `datatype` (optional)
-* `apikey` (required)
+REAL_GDP_PER_CAPITA
+This API returns the quarterly Real GDP per Capita data of the United States.
 
-**Example**
+Source: U.S. Bureau of Economic Analysis, Real gross domestic product per capita, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
 
-```
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=REAL_GDP_PER_CAPITA
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=REAL_GDP_PER_CAPITA&apikey=demo
-```
 
----
 
-## <a id="treasury_yield"></a> **TREASURY_YIELD**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-US Treasury yield curve data (3m, 2y, 5y, 7y, 10y, 30y).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=REAL_GDP_PER_CAPITA&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `TREASURY_YIELD`
-* `interval` (optional): `daily` | `weekly` | `monthly` (default)
-* `maturity` (optional): `3month` | `2year` | `5year` | `7year` | `10year` | `30year`
-* `datatype` (optional)
-* `apikey` (required)
+TREASURY_YIELD Trending
 
-**Example**
+This API returns the daily, weekly, and monthly US treasury yield of a given maturity timeline (e.g., 5 year, 30 year, etc).
 
-```
+Source: Board of Governors of the Federal Reserve System (US), Market Yield on U.S. Treasury Securities at 3-month, 2-year, 5-year, 7-year, 10-year, and 30-year Constant Maturities, Quoted on an Investment Basis, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=TREASURY_YIELD
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings daily, weekly, and monthly are accepted.
+
+❚ Optional: maturity
+
+By default, maturity=10year. Strings 3month, 2year, 5year, 7year, 10year, and 30year are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=TREASURY_YIELD&interval=monthly&maturity=10year&apikey=demo
-```
 
----
 
-## <a id="federal_funds_rate"></a> **FEDERAL_FUNDS_RATE**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-US Federal Funds effective interest rate.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TREASURY_YIELD&interval=monthly&maturity=10year&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `FEDERAL_FUNDS_RATE`
-* `interval` (optional): `daily` | `weekly` | `monthly` (default)
-* `datatype` (optional)
-* `apikey` (required)
+FEDERAL_FUNDS_RATE
 
-**Example**
+This API returns the daily, weekly, and monthly federal funds rate (interest rate) of the United States.
 
-```
+Source: Board of Governors of the Federal Reserve System (US), Federal Funds Effective Rate, retrieved from FRED, Federal Reserve Bank of St. Louis (https://fred.stlouisfed.org/series/FEDFUNDS). This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=FEDERAL_FUNDS_RATE
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings daily, weekly, and monthly are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=FEDERAL_FUNDS_RATE&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="cpi"></a> **CPI**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Consumer Price Index (inflation gauge), monthly or semiannual.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=FEDERAL_FUNDS_RATE&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `CPI`
-* `interval` (optional): `monthly` (default) | `semiannual`
-* `datatype` (optional)
-* `apikey` (required)
+CPI
 
-**Example**
+This API returns the monthly and semiannual consumer price index (CPI) of the United States. CPI is widely regarded as the barometer of inflation levels in the broader economy.
 
-```
+Source: U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items in U.S. City Average, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=CPI
+
+❚ Optional: interval
+
+By default, interval=monthly. Strings monthly and semiannual are accepted.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=CPI&interval=monthly&apikey=demo
-```
 
----
 
-## <a id="inflation"></a> **INFLATION**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Annual US inflation rate (% change in CPI).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CPI&interval=monthly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `INFLATION`
-* `datatype` (optional)
-* `apikey` (required)
+INFLATION
 
-**Example**
+This API returns the annual inflation rates (consumer prices) of the United States.
 
-```
+Source: World Bank, Inflation, consumer prices for the United States, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=INFLATION
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=INFLATION&apikey=demo
-```
 
----
 
-## <a id="retail_sales"></a> **RETAIL_SALES**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Advance Retail Sales (Retail Trade), monthly.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=INFLATION&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `RETAIL_SALES`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+RETAIL_SALES
 
-```
+This API returns the monthly Advance Retail Sales: Retail Trade data of the United States.
+
+Source: U.S. Census Bureau, Advance Retail Sales: Retail Trade, retrieved from FRED, Federal Reserve Bank of St. Louis (https://fred.stlouisfed.org/series/RSXFSN). This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=RETAIL_SALES
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=RETAIL_SALES&apikey=demo
-```
 
----
 
-## <a id="durables"></a> **DURABLES**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Manufacturers' New Orders: Durable Goods.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=RETAIL_SALES&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `DURABLES`
-* `datatype` (optional)
-* `apikey` (required)
+DURABLES
 
-**Example**
+This API returns the monthly manufacturers' new orders of durable goods in the United States.
 
-```
+Source: U.S. Census Bureau, Manufacturers' New Orders: Durable Goods, retrieved from FRED, Federal Reserve Bank of St. Louis (https://fred.stlouisfed.org/series/UMDMNO). This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=DURABLES
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=DURABLES&apikey=demo
-```
 
----
 
-## <a id="unemployment"></a> **UNEMPLOYMENT**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-US unemployment rate (% of labor force).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DURABLES&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `UNEMPLOYMENT`
-* `datatype` (optional)
-* `apikey` (required)
+UNEMPLOYMENT
 
-**Example**
+This API returns the monthly unemployment data of the United States. The unemployment rate represents the number of unemployed as a percentage of the labor force. Labor force data are restricted to people 16 years of age and older, who currently reside in 1 of the 50 states or the District of Columbia, who do not reside in institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces (source).
 
-```
+Source: U.S. Bureau of Labor Statistics, Unemployment Rate, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=UNEMPLOYMENT
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=UNEMPLOYMENT&apikey=demo
-```
 
----
 
-## <a id="nonfarm_payroll"></a> **NONFARM_PAYROLL**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Total Nonfarm Payroll (employment level).
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=UNEMPLOYMENT&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `NONFARM_PAYROLL`
-* `datatype` (optional)
-* `apikey` (required)
+NONFARM_PAYROLL
 
-**Example**
+This API returns the monthly US All Employees: Total Nonfarm (commonly known as Total Nonfarm Payroll), a measure of the number of U.S. workers in the economy that excludes proprietors, private household employees, unpaid volunteers, farm employees, and the unincorporated self-employed.
 
-```
+Source: U.S. Bureau of Labor Statistics, All Employees, Total Nonfarm, retrieved from FRED, Federal Reserve Bank of St. Louis. This data feed uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this data feed, you agree to be bound by the FRED® API Terms of Use.
+
+
+API Parameters
+❚ Required: function
+
+The function of your choice. In this case, function=NONFARM_PAYROLL
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=NONFARM_PAYROLL&apikey=demo
-```
 
----
 
-# **10. Technical Indicators**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-This is the largest section of the specification.
-Indicators are grouped into:
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=NONFARM_PAYROLL&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* **10.1 Moving Averages**
-* **10.2 Oscillators & Momentum**
-* **10.3 Volatility Indicators**
-* **10.4 Volume Indicators**
-* **10.5 Hilbert Transform Indicators**
+print(data)
 
-Below is **Part 5**, covering all **Moving Averages**.
+Technical Indicators
+Technical indicator APIs for a given equity or currency exchange pair, derived from the underlying time series based stock API and forex data. All indicators are calculated from adjusted time series data to eliminate artificial price/volume perturbations from historical split and dividend events.
 
----
 
-# **10.1 Moving Averages**
+SMA Trending
 
----
+This API returns the simple moving average (SMA) values. See also: SMA explainer and mathematical reference.
 
-## <a id="sma"></a> **SMA — Simple Moving Average**
 
-**Parameters**
+API Parameters
+❚ Required: function
 
-* `function`: `SMA`
-* `symbol` (required)
-* `interval` (required): `1min` `5min` `15min` `30min` `60min` `daily` `weekly` `monthly`
-* `month` (optional)
-* `time_period` (required)
-* `series_type` (required): `open` `high` `low` `close`
-* `datatype` (optional)
-* `apikey` (required)
+The technical indicator of your choice. In this case, function=SMA
 
-**Example**
+❚ Required: symbol
 
-```
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=SMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=SMA&symbol=USDEUR&interval=weekly&time_period=10&series_type=open&apikey=demo
 
-## <a id="ema"></a> **EMA — Exponential Moving Average**
 
-Same structure as SMA.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `EMA`
-* [same as SMA]
+print(data)
 
-**Example**
+EMA Trending
 
-```
+This API returns the exponential moving average (EMA) values. See also: EMA explainer and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=EMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=EMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=EMA&symbol=USDEUR&interval=weekly&time_period=10&series_type=open&apikey=demo
 
-## <a id="wma"></a> **WMA — Weighted Moving Average**
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `WMA`
-* Same structure as SMA
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=EMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+WMA
+
+This API returns the weighted moving average (WMA) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=WMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=WMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-## <a id="dema"></a> **DEMA — Double Exponential Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=WMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `DEMA`
-* Same structure as SMA
+print(data)
 
-**Example**
+DEMA
 
-```
+This API returns the double exponential moving average (DEMA) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=DEMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=DEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-## <a id="tema"></a> **TEMA — Triple Exponential Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `TEMA`
-* Same structure as SMA
+print(data)
 
-**Example**
+TEMA
 
-```
+This API returns the triple exponential moving average (TEMA) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=TEMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=TEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-## <a id="trima"></a> **TRIMA — Triangular Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TEMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `TRIMA`
-* Same structure as SMA
+print(data)
 
-**Example**
+TRIMA
 
-```
+This API returns the triangular moving average (TRIMA) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=TRIMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=TRIMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-## <a id="kama"></a> **KAMA — Kaufman Adaptive Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TRIMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `KAMA`
-* Same structure as SMA
+print(data)
 
-**Example**
+KAMA
 
-```
+This API returns the Kaufman adaptive moving average (KAMA) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=KAMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=KAMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-## <a id="mama"></a> **MAMA — MESA Adaptive Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=KAMA&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `MAMA`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `series_type` (required)
-* `fastlimit` (optional): default 0.01
-* `slowlimit` (optional): default 0.01
-* `datatype` (optional)
-* `apikey` (required)
+print(data)
 
-**Example**
+MAMA
 
-```
+This API returns the MESA adaptive moving average (MAMA) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MAMA
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastlimit
+
+Positive floats are accepted. By default, fastlimit=0.01.
+
+❚ Optional: slowlimit
+
+Positive floats are accepted. By default, slowlimit=0.01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MAMA&symbol=IBM&interval=daily&series_type=close&fastlimit=0.02&apikey=demo
-```
 
----
 
-## <a id="t3"></a> **T3 — Tilson Moving Average**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MAMA&symbol=IBM&interval=daily&series_type=close&fastlimit=0.02&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `T3`
-* Same structure as SMA (uses time_period and series_type)
+print(data)
 
-**Example**
+VWAP Trending Premium
 
-```
+This API returns the volume weighted average price (VWAP) for intraday time series. See also: Investopedia article.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=VWAP
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. In keeping with mainstream investment literatures on VWAP, the following intraday intervals are supported: 1min, 5min, 15min, 30min, 60min
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+https://www.alphavantage.co/query?function=VWAP&symbol=IBM&interval=15min&apikey=demo
+
+
+💡 Tip: this is a premium API function. Subscribe to a premium membership plan to instantly unlock all premium APIs.
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=VWAP&symbol=IBM&interval=15min&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+T3
+
+This API returns the Tilson moving average (T3) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=T3
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each moving average value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=T3&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
 
-# **10.2 Oscillators & Momentum Indicators**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-This section includes all classical oscillators such as MACD, RSI, Stochastic, momentum indicators, rate-of-change indicators, and composite oscillators.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=T3&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
----
+print(data)
 
-## <a id="macd"></a> **MACD — Moving Average Convergence Divergence**
+MACD Trending Premium
 
-**Parameters**
+This API returns the moving average convergence / divergence (MACD) values. See also: Investopedia article and mathematical reference.
 
-* `function`: `MACD`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `series_type` (required)
-* `fastperiod` (optional): default `12`
-* `slowperiod` (optional): default `26`
-* `signalperiod` (optional): default `9`
-* `datatype` (optional)
-* `apikey` (required)
 
-**Example**
+API Parameters
+❚ Required: function
 
-```
+The technical indicator of your choice. In this case, function=MACD
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastperiod
+
+Positive integers are accepted. By default, fastperiod=12.
+
+❚ Optional: slowperiod
+
+Positive integers are accepted. By default, slowperiod=26.
+
+❚ Optional: signalperiod
+
+Positive integers are accepted. By default, signalperiod=9.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=MACD&symbol=IBM&interval=daily&series_type=open&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=MACD&symbol=USDEUR&interval=weekly&series_type=open&apikey=demo
 
-## <a id="macdext"></a> **MACDEXT — Extended MACD (Custom MA Types)**
 
-Same as MACD but with configurable moving average types.
+💡 Tip: this is a premium API function. Subscribe to a premium membership plan to instantly unlock all premium APIs.
 
-**Parameters**
 
-* `function`: `MACDEXT`
-* Same as MACD plus:
-* `fastmatype`, `slowmatype`, `signalmatype` (optional): values 0–8 (SMA, EMA, WMA, DEMA, TEMA, TRIMA, T3, KAMA, MAMA)
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Example**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MACD&symbol=IBM&interval=daily&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-```
+print(data)
+
+MACDEXT
+
+This API returns the moving average convergence / divergence values with controllable moving average type. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MACDEXT
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastperiod
+
+Positive integers are accepted. By default, fastperiod=12.
+
+❚ Optional: slowperiod
+
+Positive integers are accepted. By default, slowperiod=26.
+
+❚ Optional: signalperiod
+
+Positive integers are accepted. By default, signalperiod=9.
+
+❚ Optional: fastmatype
+
+Moving average type for the faster moving average. By default, fastmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: slowmatype
+
+Moving average type for the slower moving average. By default, slowmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: signalmatype
+
+Moving average type for the signal moving average. By default, signalmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=MACDEXT&symbol=IBM&interval=daily&series_type=open&apikey=demo
-```
 
----
 
-## <a id="stoch"></a> **STOCH — Stochastic Oscillator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MACDEXT&symbol=IBM&interval=daily&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `STOCH`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `fastkperiod` (optional): default `5`
-* `slowkperiod` (optional): default `3`
-* `slowdperiod` (optional): default `3`
-* `slowkmatype`, `slowdmatype` (optional)
-* `datatype` (optional)
-* `apikey` (required)
+print(data)
 
-**Example**
+STOCH Trending
 
-```
+This API returns the stochastic oscillator (STOCH) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=STOCH
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: fastkperiod
+
+The time period of the fastk moving average. Positive integers are accepted. By default, fastkperiod=5.
+
+❚ Optional: slowkperiod
+
+The time period of the slowk moving average. Positive integers are accepted. By default, slowkperiod=3.
+
+❚ Optional: slowdperiod
+
+The time period of the slowd moving average. Positive integers are accepted. By default, slowdperiod=3.
+
+❚ Optional: slowkmatype
+
+Moving average type for the slowk moving average. By default, slowkmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: slowdmatype
+
+Moving average type for the slowd moving average. By default, slowdmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=STOCH&symbol=IBM&interval=daily&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=STOCH&symbol=USDEUR&interval=weekly&apikey=demo
 
-## <a id="stochf"></a> **STOCHF — Fast Stochastic Oscillator**
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `STOCHF`
-* Same base structure as STOCH
-* Fast-K & Fast-D parameters:
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=STOCH&symbol=IBM&interval=daily&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-  * `fastkperiod` (optional)
-  * `fastdperiod` (optional)
-  * `fastdmatype` (optional)
+print(data)
 
-**Example**
+STOCHF
 
-```
+This API returns the stochastic fast (STOCHF) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=STOCHF
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: fastkperiod
+
+The time period of the fastk moving average. Positive integers are accepted. By default, fastkperiod=5.
+
+❚ Optional: fastdperiod
+
+The time period of the fastd moving average. Positive integers are accepted. By default, fastdperiod=3.
+
+❚ Optional: fastdmatype
+
+Moving average type for the fastd moving average. By default, fastdmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
 https://www.alphavantage.co/query?function=STOCHF&symbol=IBM&interval=daily&apikey=demo
-```
 
----
 
-## <a id="rsi"></a> **RSI — Relative Strength Index**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=STOCHF&symbol=IBM&interval=daily&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `RSI`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `series_type` (required)
-* `datatype` (optional)
-* `apikey` (required)
+print(data)
 
-**Example**
+RSI Trending
 
-```
+This API returns the relative strength index (RSI) values. See also: RSI explainer and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=RSI
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each RSI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=RSI&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=RSI&symbol=USDEUR&interval=weekly&time_period=10&series_type=open&apikey=demo
 
-## <a id="stochrsi"></a> **STOCHRSI — Stochastic RSI**
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `STOCHRSI`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `series_type` (required)
-* `fastkperiod` (optional)
-* `fastdperiod` (optional)
-* `fastdmatype` (optional)
-* `datatype` (optional)
-* `apikey` (required)
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=RSI&symbol=IBM&interval=weekly&time_period=10&series_type=open&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
-https://www.alphavantage.co/query?function=STOCHRSI&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo
-```
+STOCHRSI
 
----
+This API returns the stochastic relative strength index (STOCHRSI) values. See also: mathematical reference.
 
-## <a id="willr"></a> **WILLR — Williams %R**
 
-**Parameters**
+API Parameters
+❚ Required: function
 
-* `function`: `WILLR`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `datatype` (optional)
-* `apikey` (required)
+The technical indicator of your choice. In this case, function=STOCHRSI
 
-**Example**
+❚ Required: symbol
 
-```
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each STOCHRSI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastkperiod
+
+The time period of the fastk moving average. Positive integers are accepted. By default, fastkperiod=5.
+
+❚ Optional: fastdperiod
+
+The time period of the fastd moving average. Positive integers are accepted. By default, fastdperiod=3.
+
+❚ Optional: fastdmatype
+
+Moving average type for the fastd moving average. By default, fastdmatype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+https://www.alphavantage.co/query?function=STOCHRSI&symbol=IBM&interval=daily&time_period=10&series_type=close&fastkperiod=6&fastdmatype=1&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=STOCHRSI&symbol=IBM&interval=daily&time_period=10&series_type=close&fastkperiod=6&fastdmatype=1&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+WILLR
+
+This API returns the Williams' %R (WILLR) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=WILLR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each WILLR value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=WILLR&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="adx"></a> **ADX — Average Directional Movement Index**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=WILLR&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `ADX`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `datatype` (optional)
-* `apikey` (required)
+print(data)
 
-**Example**
+ADX Trending
 
-```
+This API returns the average directional movement index (ADX) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ADX
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each ADX value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=ADX&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=ADX&symbol=USDEUR&interval=weekly&time_period=10&apikey=demo
 
-## <a id="adxr"></a> **ADXR — Average Directional Movement Rating**
 
-Same as ADX.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Example**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ADX&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-```
+print(data)
+
+ADXR
+
+This API returns the average directional movement index rating (ADXR) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ADXR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each ADXR value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=ADXR&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="apo"></a> **APO — Absolute Price Oscillator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ADXR&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `APO`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `fastperiod` (optional)
-* `slowperiod` (optional)
-* `matype` (optional)
-* `datatype` (optional)
-* `apikey`
+print(data)
 
-**Example**
+APO
 
-```
-https://www.alphavantage.co/query?function=APO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&apikey=demo
-```
+This API returns the absolute price oscillator (APO) values. See also: mathematical reference.
 
----
 
-## <a id="ppo"></a> **PPO — Percentage Price Oscillator**
+API Parameters
+❚ Required: function
 
-Structure identical to APO.
+The technical indicator of your choice. In this case, function=APO
 
-**Example**
+❚ Required: symbol
 
-```
-https://www.alphavantage.co/query?function=PPO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&apikey=demo
-```
+The name of the ticker of your choice. For example: symbol=IBM
 
----
+❚ Required: interval
 
-## <a id="mom"></a> **MOM — Momentum**
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
 
-**Parameters**
+❚ Optional: month
 
-* `function`: `MOM`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `series_type`
-* `datatype`
-* `apikey`
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
 
-**Example**
+❚ Required: series_type
 
-```
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastperiod
+
+Positive integers are accepted. By default, fastperiod=12.
+
+❚ Optional: slowperiod
+
+Positive integers are accepted. By default, slowperiod=26.
+
+❚ Optional: matype
+
+Moving average type. By default, matype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+https://www.alphavantage.co/query?function=APO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=APO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+PPO
+
+This API returns the percentage price oscillator (PPO) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=PPO
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: fastperiod
+
+Positive integers are accepted. By default, fastperiod=12.
+
+❚ Optional: slowperiod
+
+Positive integers are accepted. By default, slowperiod=26.
+
+❚ Optional: matype
+
+Moving average type. By default, matype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+https://www.alphavantage.co/query?function=PPO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo
+
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=PPO&symbol=IBM&interval=daily&series_type=close&fastperiod=10&matype=1&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
+
+MOM
+
+This API returns the momentum (MOM) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MOM
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MOM value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MOM&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="bop"></a> **BOP — Balance of Power**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MOM&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `BOP`
-* `symbol`
-* `interval`
-* `month`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+BOP
 
-```
+This API returns the balance of power (BOP) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=BOP
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=BOP&symbol=IBM&interval=daily&apikey=demo
-```
 
----
 
-## <a id="cci"></a> **CCI — Commodity Channel Index**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=BOP&symbol=IBM&interval=daily&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `CCI`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+CCI Trending
 
-```
+This API returns the commodity channel index (CCI) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=CCI
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each CCI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=CCI&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=CCI&symbol=USDEUR&interval=weekly&time_period=10&apikey=demo
 
-## <a id="cmo"></a> **CMO — Chande Momentum Oscillator**
 
-**Parameters**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-* `function`: `CMO`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `series_type`
-* `datatype`
-* `apikey`
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CCI&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+CMO
+
+This API returns the Chande momentum oscillator (CMO) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=CMO
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each CMO value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=CMO&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="roc"></a> **ROC — Rate of Change**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=CMO&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `ROC`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `series_type`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+ROC
 
-```
+This API returns the rate of change (ROC) values. See also: Investopedia article.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ROC
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each ROC value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=ROC&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="rocr"></a> **ROCR — Rate of Change Ratio**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Identical parameter structure to ROC.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ROC&symbol=IBM&interval=weekly&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+ROCR
+
+This API returns the rate of change ratio (ROCR) values. See also: Investopedia article.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ROCR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each ROCR value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=ROCR&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="aroon"></a> **AROON — Aroon Up/Down Indicator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ROCR&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `AROON`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+AROON Trending
 
-```
+This API returns the Aroon (AROON) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=AROON
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each AROON value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=AROON&symbol=IBM&interval=daily&time_period=14&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=AROON&symbol=USDEUR&interval=weekly&time_period=14&apikey=demo
 
-## <a id="aroonosc"></a> **AROONOSC — Aroon Oscillator**
 
-Same parameters as AROON.
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Example**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=AROON&symbol=IBM&interval=daily&time_period=14&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-```
+print(data)
+
+AROONOSC
+
+This API returns the Aroon oscillator (AROONOSC) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=AROONOSC
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each AROONOSC value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=AROONOSC&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="mfi"></a> **MFI — Money Flow Index**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=AROONOSC&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `MFI`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+MFI
 
-```
+This API returns the money flow index (MFI) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MFI
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MFI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MFI&symbol=IBM&interval=weekly&time_period=10&apikey=demo
-```
 
----
 
-## <a id="trix"></a> **TRIX — Triple Smoothed ROC**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MFI&symbol=IBM&interval=weekly&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `TRIX`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `series_type`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+TRIX
 
-```
+This API returns the 1-day rate of change of a triple smooth exponential moving average (TRIX) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=TRIX
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each TRIX value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TRIX&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ultosc"></a> **ULTOSC — Ultimate Oscillator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TRIX&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `ULTOSC`
-* `symbol`
-* `interval`
-* `month`
-* `timeperiod1` (optional): default 7
-* `timeperiod2` (optional): default 14
-* `timeperiod3` (optional): default 28
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+ULTOSC
 
-```
+This API returns the ultimate oscillator (ULTOSC) values. See also: mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ULTOSC
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: timeperiod1
+
+The first time period for the indicator. Positive integers are accepted. By default, timeperiod1=7.
+
+❚ Optional: timeperiod2
+
+The second time period for the indicator. Positive integers are accepted. By default, timeperiod2=14.
+
+❚ Optional: timeperiod3
+
+The third time period for the indicator. Positive integers are accepted. By default, timeperiod3=28.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Examples (click for JSON output)
+https://www.alphavantage.co/query?function=ULTOSC&symbol=IBM&interval=daily&timeperiod1=8&apikey=demo
+
 https://www.alphavantage.co/query?function=ULTOSC&symbol=IBM&interval=daily&apikey=demo
-```
 
----
 
-## <a id="dx"></a> **DX — Directional Movement Index**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ULTOSC&symbol=IBM&interval=daily&timeperiod1=8&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `DX`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+DX
 
-```
+This API returns the directional movement index (DX) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=DX
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each DX value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=DX&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="minus_di"></a> **MINUS_DI — Minus Directional Indicator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Same structure as DX.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=DX&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+MINUS_DI
+
+This API returns the minus directional indicator (MINUS_DI) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MINUS_DI
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MINUS_DI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MINUS_DI&symbol=IBM&interval=weekly&time_period=10&apikey=demo
-```
 
----
 
-## <a id="plus_di"></a> **PLUS_DI — Plus Directional Indicator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Same structure as DX.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MINUS_DI&symbol=IBM&interval=weekly&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+PLUS_DI
+
+This API returns the plus directional indicator (PLUS_DI) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=PLUS_DI
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each PLUS_DI value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=PLUS_DI&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="minus_dm"></a> **MINUS_DM — Minus Directional Movement**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Same structure as DX.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=PLUS_DI&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+MINUS_DM
+
+This API returns the minus directional movement (MINUS_DM) values. See also: Investopedia article
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MINUS_DM
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MINUS_DM value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MINUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="plus_dm"></a> **PLUS_DM — Plus Directional Movement**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-Same structure as DX.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MINUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Example**
+print(data)
 
-```
+PLUS_DM
+
+This API returns the plus directional movement (PLUS_DM) values. See also: Investopedia article
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=PLUS_DM
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each PLUS_DM value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=PLUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="bbands"></a> **BBANDS — Bollinger Bands**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=PLUS_DM&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `BBANDS`
-* `symbol`
-* `interval`
-* `month`
-* `time_period`
-* `series_type`
-* `nbdevup` (optional): default 2
-* `nbdevdn` (optional): default 2
-* `matype` (optional)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+BBANDS Trending
 
-```
+This API returns the Bollinger bands (BBANDS) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=BBANDS
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each BBANDS value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: nbdevup
+
+The standard deviation multiplier of the upper band. Positive integers are accepted. By default, nbdevup=2.
+
+❚ Optional: nbdevdn
+
+The standard deviation multiplier of the lower band. Positive integers are accepted. By default, nbdevdn=2.
+
+❚ Optional: matype
+
+Moving average type of the time series. By default, matype=0. Integers 0 - 8 are accepted with the following mappings. 0 = Simple Moving Average (SMA), 1 = Exponential Moving Average (EMA), 2 = Weighted Moving Average (WMA), 3 = Double Exponential Moving Average (DEMA), 4 = Triple Exponential Moving Average (TEMA), 5 = Triangular Moving Average (TRIMA), 6 = T3 Moving Average, 7 = Kaufman Adaptive Moving Average (KAMA), 8 = MESA Adaptive Moving Average (MAMA).
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
+Equity:
 https://www.alphavantage.co/query?function=BBANDS&symbol=IBM&interval=weekly&time_period=5&series_type=close&nbdevup=3&nbdevdn=3&apikey=demo
-```
 
----
+Forex (FX) or cryptocurrency pair:
+https://www.alphavantage.co/query?function=BBANDS&symbol=USDEUR&interval=weekly&time_period=5&series_type=close&nbdevup=3&nbdevdn=3&apikey=demo
 
-# **10.3 Volatility Indicators**
 
----
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-## <a id="midpoint"></a> **MIDPOINT — Midpoint Indicator**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=BBANDS&symbol=IBM&interval=weekly&time_period=5&series_type=close&nbdevup=3&nbdevdn=3&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-MIDPOINT = (highest value + lowest value) / 2 over the given lookback.
+print(data)
 
-**Parameters**
+MIDPOINT
 
-* `function`: `MIDPOINT`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `series_type` (required)
-* `datatype` (optional)
-* `apikey` (required)
+This API returns the midpoint (MIDPOINT) values. MIDPOINT = (highest value + lowest value)/2.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MIDPOINT
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MIDPOINT value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MIDPOINT&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo
-```
 
----
 
-## <a id="midprice"></a> **MIDPRICE — Mid-Price Indicator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-MIDPRICE = (highest high + lowest low) / 2 over the lookback.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MIDPOINT&symbol=IBM&interval=daily&time_period=10&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `MIDPRICE`
-* `symbol` (required)
-* `interval` (required)
-* `month` (optional)
-* `time_period` (required)
-* `datatype` (optional)
-* `apikey`
+MIDPRICE
 
-**Example**
+This API returns the midpoint price (MIDPRICE) values. MIDPRICE = (highest high + lowest low)/2.
 
-```
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=MIDPRICE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each MIDPRICE value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=MIDPRICE&symbol=IBM&interval=daily&time_period=10&apikey=demo
-```
 
----
 
-## <a id="sar"></a> **SAR — Parabolic Stop & Reverse**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=MIDPRICE&symbol=IBM&interval=daily&time_period=10&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `SAR`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `acceleration` (optional): default 0.01
-* `maximum` (optional): default 0.20
-* `datatype` (optional)
-* `apikey`
+print(data)
 
-**Example**
+SAR
 
-```
+This API returns the parabolic SAR (SAR) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=SAR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: acceleration
+
+The acceleration factor. Positive floats are accepted. By default, acceleration=0.01.
+
+❚ Optional: maximum
+
+The acceleration factor maximum value. Positive floats are accepted. By default, maximum=0.20.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=SAR&symbol=IBM&interval=weekly&acceleration=0.05&maximum=0.25&apikey=demo
-```
 
----
 
-## <a id="trange"></a> **TRANGE — True Range**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=SAR&symbol=IBM&interval=weekly&acceleration=0.05&maximum=0.25&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `TRANGE`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+TRANGE
 
-```
+This API returns the true range (TRANGE) values. See also: mathematical reference
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=TRANGE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=TRANGE&symbol=IBM&interval=daily&apikey=demo
-```
 
----
 
-## <a id="atr"></a> **ATR — Average True Range**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=TRANGE&symbol=IBM&interval=daily&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `ATR`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `time_period` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+ATR
 
-```
+This API returns the average true range (ATR) values. See also: Investopedia article and mathematical reference
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ATR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each ATR value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=ATR&symbol=IBM&interval=daily&time_period=14&apikey=demo
-```
 
----
 
-## <a id="natr"></a> **NATR — Normalized ATR**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-ATR expressed as percentage of price.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ATR&symbol=IBM&interval=daily&time_period=14&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-**Parameters**
+print(data)
 
-* `function`: `NATR`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `time_period` (required)
-* `datatype`
-* `apikey`
+NATR
 
-**Example**
+This API returns the normalized average true range (NATR) values.
 
-```
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=NATR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required:time_period
+
+Number of data points used to calculate each NATR value. Positive integers are accepted (e.g., time_period=60, time_period=200)
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=NATR&symbol=IBM&interval=weekly&time_period=14&apikey=demo
-```
 
----
 
-# **10.4 Volume Indicators**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
----
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=NATR&symbol=IBM&interval=weekly&time_period=14&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-## <a id="ad"></a> **AD — Chaikin Accumulation/Distribution Line**
+print(data)
 
-**Parameters**
+AD Trending
 
-* `function`: `AD`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `datatype`
-* `apikey`
+This API returns the Chaikin A/D line (AD) values. See also: Investopedia article and mathematical reference.
 
-**Example**
 
-```
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=AD
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=AD&symbol=IBM&interval=daily&apikey=demo
-```
 
----
 
-## <a id="adosc"></a> **ADOSC — Chaikin A/D Oscillator**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=AD&symbol=IBM&interval=daily&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `ADOSC`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `fastperiod` (optional): default 3
-* `slowperiod` (optional): default 10
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+ADOSC
 
-```
+This API returns the Chaikin A/D oscillator (ADOSC) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=ADOSC
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: fastperiod
+
+The time period of the fast EMA. Positive integers are accepted. By default, fastperiod=3.
+
+❚ Optional: slowperiod
+
+The time period of the slow EMA. Positive integers are accepted. By default, slowperiod=10.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example(click for JSON output)
 https://www.alphavantage.co/query?function=ADOSC&symbol=IBM&interval=daily&fastperiod=5&apikey=demo
-```
 
----
 
-## <a id="obv"></a> **OBV — On-Balance Volume**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=ADOSC&symbol=IBM&interval=daily&fastperiod=5&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `OBV`
-* `symbol`
-* `interval`
-* `month` (optional)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+OBV Trending
 
-```
+This API returns the on balance volume (OBV) values. See also: Investopedia article and mathematical reference.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=OBV
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=OBV&symbol=IBM&interval=weekly&apikey=demo
-```
 
----
 
-# **10.5 Hilbert Transform Indicators**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-These indicators provide instantaneous cycles, phases, and trend-mode insights via the Hilbert Transform.
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=OBV&symbol=IBM&interval=weekly&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
----
+print(data)
 
-## <a id="ht_trendline"></a> **HT_TRENDLINE — Instantaneous Trendline**
+HT_TRENDLINE
 
-**Parameters**
+This API returns the Hilbert transform, instantaneous trendline (HT_TRENDLINE) values.
 
-* `function`: `HT_TRENDLINE`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
 
-**Example**
+API Parameters
+❚ Required: function
 
-```
+The technical indicator of your choice. In this case, function=HT_TRENDLINE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_TRENDLINE&symbol=IBM&interval=daily&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ht_sine"></a> **HT_SINE — Sinewave + Leads**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_TRENDLINE&symbol=IBM&interval=daily&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `HT_SINE`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+HT_SINE
 
-```
+This API returns the Hilbert transform, sine wave (HT_SINE) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=HT_SINE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_SINE&symbol=IBM&interval=daily&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ht_trendmode"></a> **HT_TRENDMODE — Trend vs Cycle Mode**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_SINE&symbol=IBM&interval=daily&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `HT_TRENDMODE`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+HT_TRENDMODE
 
-```
+This API returns the Hilbert transform, trend vs cycle mode (HT_TRENDMODE) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=HT_TRENDMODE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_TRENDMODE&symbol=IBM&interval=weekly&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ht_dcperiod"></a> **HT_DCPERIOD — Dominant Cycle Period**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_TRENDMODE&symbol=IBM&interval=weekly&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `HT_DCPERIOD`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+HT_DCPERIOD
 
-```
+This API returns the Hilbert transform, dominant cycle period (HT_DCPERIOD) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=HT_DCPERIOD
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_DCPERIOD&symbol=IBM&interval=daily&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ht_dcphase"></a> **HT_DCPHASE — Dominant Cycle Phase**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_DCPERIOD&symbol=IBM&interval=daily&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `HT_DCPHASE`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+HT_DCPHASE
 
-```
+This API returns the Hilbert transform, dominant cycle phase (HT_DCPHASE) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=HT_DCPHASE
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_DCPHASE&symbol=IBM&interval=daily&series_type=close&apikey=demo
-```
 
----
 
-## <a id="ht_phasor"></a> **HT_PHASOR — Phasor Components**
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
 
-**Parameters**
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_DCPHASE&symbol=IBM&interval=daily&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
 
-* `function`: `HT_PHASOR`
-* `symbol`
-* `interval`
-* `month`
-* `series_type` (required)
-* `datatype`
-* `apikey`
+print(data)
 
-**Example**
+HT_PHASOR
 
-```
+This API returns the Hilbert transform, phasor components (HT_PHASOR) values.
+
+
+API Parameters
+❚ Required: function
+
+The technical indicator of your choice. In this case, function=HT_PHASOR
+
+❚ Required: symbol
+
+The name of the ticker of your choice. For example: symbol=IBM
+
+❚ Required: interval
+
+Time interval between two consecutive data points in the time series. The following values are supported: 1min, 5min, 15min, 30min, 60min, daily, weekly, monthly
+
+❚ Optional: month
+
+By default, this parameter is not set and the technical indicator values will be calculated based on the default length of the underlying intraday, daily, weekly, or monthly time series data. You can use the month parameter (in YYYY-MM format) to return technical indicators for a specific month in history. For example, month=2009-01.
+
+❚ Required: series_type
+
+The desired price type in the time series. Four types are supported: close, open, high, low
+
+❚ Optional: datatype
+
+By default, datatype=json. Strings json and csv are accepted with the following specifications: json returns the daily time series in JSON format; csv returns the time series as a CSV (comma separated value) file.
+
+❚ Required: apikey
+
+Your API key. Claim your free API key here.
+
+
+Example (click for JSON output)
 https://www.alphavantage.co/query?function=HT_PHASOR&symbol=IBM&interval=weekly&series_type=close&apikey=demo
-```
 
----
+
+Language-specific guides
+Python NodeJS PHP C#/.NET ✨MCP & Other
+import requests
+
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+url = 'https://www.alphavantage.co/query?function=HT_PHASOR&symbol=IBM&interval=weekly&series_type=close&apikey=demo'
+r = requests.get(url)
+data = r.json()
+
+print(data)
