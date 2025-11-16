@@ -95,6 +95,7 @@ def _make_api_request(function_name: str, params: dict) -> dict | str:
                 raise AlphaVantageRateLimitError(
                     f"Alpha Vantage rate limit exceeded: {info_message}"
                 )
+            raise ValueError(f"Alpha Vantage error: {info_message}")
     except json.JSONDecodeError:
         # Response is not JSON (likely CSV data), which is normal
         pass

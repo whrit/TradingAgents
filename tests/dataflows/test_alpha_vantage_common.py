@@ -40,3 +40,14 @@ def test_make_api_request_raises_rate_limit(monkeypatch):
 
     with pytest.raises(av.AlphaVantageRateLimitError):
         av._make_api_request("TIME_SERIES_DAILY", {})
+
+
+def test_make_api_request_raises_generic_error(monkeypatch):
+    _patch_requests(
+        monkeypatch,
+        '{"Information": "Invalid inputs. Please refer to the API documentation https://www.alphavantage.co/documentation/#newsapi and try again."}',
+    )
+    monkeypatch.setattr(av, "get_api_key", lambda: "demo")
+
+    with pytest.raises(ValueError):
+        av._make_api_request("NEWS_SENTIMENT", {})
