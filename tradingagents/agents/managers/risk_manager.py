@@ -14,6 +14,8 @@ def create_risk_manager(llm, memory):
         fundamentals_report = state["news_report"]
         sentiment_report = state["sentiment_report"]
         trader_plan = state["investment_plan"]
+        risk_summary = state.get("risk_quant_report", "")
+        risk_metrics_json = state.get("risk_metrics_json", "")
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -38,6 +40,12 @@ Deliverables:
 
 **Analysts Debate History:**  
 {history}
+
+---
+Risk Quant Summary: {risk_summary}
+
+Structured Metrics JSON:
+{risk_metrics_json}
 
 ---
 

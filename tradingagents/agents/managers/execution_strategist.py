@@ -9,6 +9,7 @@ def create_execution_strategist(llm):
         final_decision = state.get("final_trade_decision", "")
         trader_plan = state.get("trader_investment_plan", "")
         risk_summary = state.get("risk_quant_report", "")
+        risk_metrics_json = state.get("risk_metrics_json", "")
 
         action = None
         decision_upper = final_decision.upper()
@@ -32,6 +33,7 @@ def create_execution_strategist(llm):
             f"Ticker: {ticker}\n"
             f"Trader Plan:\n{trader_plan}\n\n"
             f"Risk Guidance:\n{risk_summary}\n\n"
+            f"Risk Metrics JSON:\n{risk_metrics_json}\n\n"
             f"Proposed Instruction: {instruction or 'No trade (likely HOLD)'}"
         )
 

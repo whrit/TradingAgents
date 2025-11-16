@@ -7,30 +7,39 @@ but for broker trading operations instead of data fetching.
 from typing import Any
 
 
-# Import broker-specific implementations
-from .alpaca.trading import (
-    place_order as alpaca_place_order,
-    get_positions as alpaca_get_positions,
-    get_account as alpaca_get_account,
-    cancel_order as alpaca_cancel_order,
-)
+def _alpaca_module():
+    from .alpaca import trading as alpaca_trading
+
+    return alpaca_trading
 
 
-# Mapping of trading actions to broker-specific implementations
-BROKER_METHODS = {
-    "place_order": {
-        "alpaca": alpaca_place_order,
-    },
-    "get_positions": {
-        "alpaca": alpaca_get_positions,
-    },
-    "get_account": {
-        "alpaca": alpaca_get_account,
-    },
-    "cancel_order": {
-        "alpaca": alpaca_cancel_order,
-    },
-}
+def alpaca_place_order(*args, **kwargs):
+    return _alpaca_module().place_order(*args, **kwargs)
+
+
+def alpaca_get_positions(*args, **kwargs):
+    return _alpaca_module().get_positions(*args, **kwargs)
+
+
+def alpaca_get_account(*args, **kwargs):
+    return _alpaca_module().get_account(*args, **kwargs)
+
+
+def alpaca_cancel_order(*args, **kwargs):
+    return _alpaca_module().cancel_order(*args, **kwargs)
+
+
+def _get_method(action: str, broker: str):
+    """Resolve broker method lazily so tests can patch at runtime."""
+    if broker == "alpaca":
+        mapping = {
+            "place_order": alpaca_place_order,
+            "get_positions": alpaca_get_positions,
+            "get_account": alpaca_get_account,
+            "cancel_order": alpaca_cancel_order,
+        }
+        return mapping.get(action)
+    return None
 
 
 def route_to_broker(action: str, *args, **kwargs) -> Any:
@@ -56,13 +65,13 @@ def route_to_broker(action: str, *args, **kwargs) -> Any:
     config = get_config()
     broker = config.get("trading_broker", "alpaca")
 
-    if action not in BROKER_METHODS:
+    if action not in {"place_order", "get_positions", "get_account", "cancel_order"}:
         raise ValueError(f"Unknown broker action: {action}")
 
-    if broker not in BROKER_METHODS[action]:
+    method = _get_method(action, broker)
+    if method is None:
         raise ValueError(
-            f"Broker '{broker}' doesn't support action '{action}'. "
-            f"Available brokers for {action}: {list(BROKER_METHODS[action].keys())}"
+            f"Broker '{broker}' doesn't support action '{action}'."
         )
 
-    return BROKER_METHODS[action][broker](*args, **kwargs)
+    return method(*args, **kwargs)

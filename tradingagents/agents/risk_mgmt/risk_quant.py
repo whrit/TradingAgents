@@ -83,6 +83,7 @@ def create_risk_quant(llm):
         return {
             "messages": [result],
             "risk_quant_report": combined_report,
+            "risk_metrics_json": metrics_json,
         }
 
     return risk_quant_node

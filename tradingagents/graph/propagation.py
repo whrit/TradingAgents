@@ -42,6 +42,7 @@ class Propagator:
             "macro_report": "",
             "alternative_data_report": "",
             "risk_quant_report": "",
+            "risk_metrics_json": "",
             "execution_plan": "",
             "compliance_report": "",
             "compliance_status": "PENDING",

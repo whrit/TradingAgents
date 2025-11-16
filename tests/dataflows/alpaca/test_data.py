@@ -217,8 +217,10 @@ class TestAlpacaDataVendorErrorHandling:
                 'volume': [1000000]
             }, index=pd.DatetimeIndex(['2025-01-14']))
 
-            rate_limit_error = Exception("Rate limit exceeded")
-            rate_limit_error.__class__.__name__ = "RateLimitError"
+            class FakeRateLimitError(Exception):
+                pass
+
+            rate_limit_error = FakeRateLimitError("Rate limit exceeded")
 
             MockClient.return_value.get_bars.side_effect = [
                 rate_limit_error,
@@ -463,5 +465,6 @@ class TestAlpacaDataVendorDateHandling:
 pytestmark = [
     pytest.mark.dataflow,
     pytest.mark.alpaca,
-    pytest.mark.unit
+    pytest.mark.unit,
+    pytest.mark.usefixtures("mock_alpaca_credentials"),
 ]

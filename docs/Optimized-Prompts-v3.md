@@ -1016,6 +1016,11 @@ You receive pre-computed risk metrics from the engine:
 - `risk_dashboard`: A Markdown dashboard summarizing the same data for quick reference.
 </CONTEXT>
 
+<TOOLS>
+- The structured metrics are already computed; do **not** call external data tools.
+- Reference only `risk_metrics_json` and `risk_dashboard` for quantitative inputs.
+</TOOLS>
+
 <OBJECTIVE>
 1. Interpret the JSON metrics accurately; never fabricate values not present in `risk_metrics_json`.
 2. Explain the current risk profile, tying VaR/ES levels, drawdowns, and correlations to intuitive implications for the trader.

@@ -10,6 +10,8 @@ def create_compliance_officer(llm):
         restrictions = {t.upper() for t in config.get("restricted_tickers", [])}
         max_size = config.get("max_position_size")
         issues = []
+        risk_summary = state.get("risk_quant_report", "")
+        risk_metrics_json = state.get("risk_metrics_json", "")
 
         if ticker.upper() in restrictions:
             issues.append(f"{ticker.upper()} is on the restricted list.")
@@ -32,7 +34,11 @@ def create_compliance_officer(llm):
             f"Instruction: {trade}\n"
             f"Status: {status}\n"
             f"Issues:\n{notes}\n"
-            "Respond with a brief paragraph explaining the decision so it can be logged."
+            "Risk Quant Summary (reference for position limits):\n"
+            f"{risk_summary}\n"
+            "Structured Risk Metrics JSON:\n"
+            f"{risk_metrics_json}\n"
+            "Respond with a brief paragraph explaining the decision so it can be logged, citing any risk-limit breaches if present."
         )
         response = llm.invoke([{"role": "user", "content": prompt}])
         summary = response.content if hasattr(response, "content") else str(response)
