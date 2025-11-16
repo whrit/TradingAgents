@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, date
 from typing import Annotated, Optional
 
@@ -6,12 +7,21 @@ from langchain_core.tools import tool
 from tradingagents.dataflows.interface import route_to_vendor
 
 MAX_NEWS_LIMIT = 50
+VALID_TICKER_PATTERN = re.compile(r"^[A-Z0-9\._:,\-]+$")
 
 
 def _normalized_ticker(value: Optional[str]) -> str:
     normalized = (value or "").strip().upper()
     if not normalized:
         raise ValueError("Ticker symbol is required before requesting news.")
+    if " " in normalized:
+        raise ValueError(
+            "Alpha Vantage news lookups require pure ticker strings without spaces."
+        )
+    if not VALID_TICKER_PATTERN.fullmatch(normalized):
+        raise ValueError(
+            "Ticker symbols may only contain letters, numbers, dashes, underscores, periods, colons, and commas."
+        )
     return normalized
 
 

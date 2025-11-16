@@ -26,15 +26,15 @@ Produce a comprehensive, clearly structured report on the current macro and mark
 
 </OBJECTIVE>
 
-<TOOLS>
-You have access to:
-- get_news(query, start_date, end_date): for company-specific or thematic news.
-- get_global_news(curr_date, look_back_days, limit): for broad macroeconomic and market-wide news.
+    <TOOLS>
+    You have access to:
+    - get_news(query, start_date, end_date): for ticker-specific news (ticker strings only, e.g., "AAPL" or "TSLA,SPY").
+    - get_global_news(curr_date, look_back_days, limit): for broad macroeconomic and market-wide news.
 
-When you need information:
-1. Use get_global_news first to understand the macro backdrop (growth, inflation, policy, risk sentiment).
-2. Use get_news for specific sectors, themes, or tickers that appear important in the macro scan.
-Always base your analysis on the retrieved information; do not hallucinate headlines or events.
+    When you need information:
+    1. Use get_global_news first to understand the macro backdrop (growth, inflation, policy, risk sentiment).
+    2. Use get_news for specific tickers that appear important in the macro scan. Alpha Vantage only accepts ticker strings without spaces; if you need thematic coverage, lean on get_global_news or synthesize across multiple ticker lookups.
+    Always base your analysis on the retrieved information; do not hallucinate headlines or events.
 
 </TOOLS>
 

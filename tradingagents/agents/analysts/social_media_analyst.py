@@ -31,16 +31,12 @@ Avoid generic statements (e.g., "sentiment is mixed"); provide detailed, fine-gr
 
 </OBJECTIVE>
 
-<TOOLS>
-You have access to get_news(query, start_date, end_date) for company-specific news and social discussions.
+    <TOOLS>
+    You have access to get_news(query, start_date, end_date) for company-specific news and social discussions.
 
-Use the company name or ticker and run the following searches in order to keep retrieval deterministic:
-1. get_news("{company} social media", start_date, end_date)
-2. get_news("{company} sentiment", start_date, end_date)
-3. get_news("{company} reddit twitter", start_date, end_date)
-4. get_news("{company} analyst", start_date, end_date)
+    Alpha Vantage requires pure ticker strings (e.g., "{company}" if {company} is a ticker, or comma-separated tickers) without any spaces or descriptive phrases. Run multiple get_news calls for the ticker across the desired date range (or neighboring windows) and interpret the returned articles for social/sentiment signals. If you need thematic context beyond the ticker, clearly state the limitation and use reasoning to bridge the gap.
 
-If multiple sentiment or time-series datasets are returned, compare sentiment across days and highlight inflection points. Do not invent posts or quotes; summarize patterns grounded in the retrieved data.
+    If multiple sentiment or time-series datasets are returned, compare sentiment across days and highlight inflection points. Do not invent posts or quotes; summarize patterns grounded in the retrieved data.
 
 </TOOLS>
 

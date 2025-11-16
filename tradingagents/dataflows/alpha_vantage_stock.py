@@ -19,7 +19,7 @@ def _fetch_symbol_timeseries(symbol: str) -> pd.DataFrame:
         "symbol": normalized,
         "outputsize": "full",
     }
-    response = _make_api_request("TIME_SERIES_DAILY_ADJUSTED", params)
+    response = _make_api_request("TIME_SERIES_DAILY", params)
     payload = json.loads(response)
     series_key = next(
         (key for key in payload.keys() if "Time Series" in key),
@@ -31,15 +31,16 @@ def _fetch_symbol_timeseries(symbol: str) -> pd.DataFrame:
     series = payload[series_key]
     records = []
     for date_str, values in series.items():
+        close_value = float(values["4. close"])
         records.append(
             {
                 "date": datetime.strptime(date_str, "%Y-%m-%d"),
                 "open": float(values["1. open"]),
                 "high": float(values["2. high"]),
                 "low": float(values["3. low"]),
-                "close": float(values["4. close"]),
-                "adjusted_close": float(values["5. adjusted close"]),
-                "volume": int(values["6. volume"]),
+                "close": close_value,
+                "adjusted_close": float(values.get("5. adjusted close", close_value)),
+                "volume": int(values.get("5. volume", values.get("6. volume", 0))),
                 "dividend_amount": float(values.get("7. dividend amount", 0.0)),
                 "split_coefficient": float(values.get("8. split coefficient", 1.0)),
             }
