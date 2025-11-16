@@ -5,29 +5,57 @@ from datetime import datetime, timedelta
 from statistics import NormalDist
 from typing import Dict, Any, Optional, Sequence
 
+import json
 import numpy as np
 import pandas as pd
-from io import StringIO
 
 from tradingagents.dataflows.interface import route_to_vendor
 
 
-def _clean_price_csv(csv_string: str) -> pd.DataFrame:
-    if not csv_string:
+def _parse_price_payload(payload: Any) -> pd.DataFrame:
+    if payload is None:
         raise ValueError("Empty price data")
 
-    rows = [
-        line for line in csv_string.splitlines() if line and not line.startswith("#")
-    ]
-    if not rows:
-        raise ValueError("Price data missing rows")
+    if isinstance(payload, str):
+        payload_obj = json.loads(payload)
+    else:
+        payload_obj = payload
 
-    df = pd.read_csv(StringIO("\n".join(rows)))
-    if "Date" not in df.columns:
-        df["Date"] = df.index
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.set_index("Date", drop=False)
-    return df
+    if isinstance(payload_obj, dict):
+        records = payload_obj.get("records", [])
+    elif isinstance(payload_obj, list):
+        records = payload_obj
+    else:
+        raise ValueError("Unsupported price payload format")
+
+    if not records:
+        empty = pd.DataFrame(columns=["Open", "High", "Low", "Close", "Volume"])
+        empty.index = pd.DatetimeIndex([], name="Date")
+        return empty
+
+    df = pd.DataFrame(records)
+    date_column = None
+    for candidate in ("date", "Date"):
+        if candidate in df.columns:
+            date_column = candidate
+            break
+    if date_column is None:
+        raise ValueError("Price data missing date column")
+
+    df["Date"] = pd.to_datetime(df[date_column])
+    rename_map = {
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "adjusted_close": "Adjusted_Close",
+        "volume": "Volume",
+    }
+    for col in list(df.columns):
+        lowered = col.lower()
+        if lowered in rename_map:
+            df.rename(columns={col: rename_map[lowered]}, inplace=True)
+    return df.set_index("Date").sort_index()
 
 
 @dataclass
@@ -124,10 +152,10 @@ class RiskEngine:
             raise ValueError("Symbol is required for risk calculations")
         end_dt = datetime.strptime(inputs.end_date, "%Y-%m-%d")
         start_dt = end_dt - timedelta(days=inputs.lookback_days + 5)
-        csv = route_to_vendor(
+        payload = route_to_vendor(
             "get_stock_data", symbol, start_dt.strftime("%Y-%m-%d"), inputs.end_date
         )
-        df = _clean_price_csv(csv)
+        df = _parse_price_payload(payload)
         df = df.loc[df.index <= end_dt]
         cutoff = end_dt - timedelta(days=inputs.lookback_days + 1)
         df = df.loc[df.index >= cutoff]

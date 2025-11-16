@@ -8,11 +8,14 @@ from typing import Optional
 from alpaca.trading.requests import (
     LimitOrderRequest,
     MarketOrderRequest,
+    OptionLegRequest,
     StopLimitOrderRequest,
     StopOrderRequest,
+    StopLossRequest,
+    TakeProfitRequest,
     TrailingStopOrderRequest,
 )
-from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.trading.enums import OrderClass, OrderSide, TimeInForce
 
 from tradingagents.dataflows.config import get_config
 
@@ -29,37 +32,37 @@ def place_order(
     trail_price: Optional[float] = None,
     trail_percent: Optional[float] = None,
     time_in_force: str = "day",
-    **kwargs
+    asset_type: str = "equity",
+    order_class: Optional[str] = None,
+    take_profit: Optional[dict] = None,
+    stop_loss_order: Optional[dict] = None,
+    legs: Optional[list] = None,
+    client_order_id: Optional[str] = None,
 ) -> str:
-    """Place an order via Alpaca.
+    """Place an order via Alpaca, supporting advanced order classes and options.
 
     Args:
-        symbol: Stock symbol (e.g., "AAPL")
-        qty: Quantity to trade (supports fractional shares)
+        symbol: Symbol or option contract (ignored for multi-leg orders)
+        qty: Quantity to trade (shares or option contracts)
         side: Order side - "buy" or "sell"
-        order_type: Order type - market, limit, stop, stop_limit, trailing_stop
-        limit_price: Limit price for limit and stop_limit orders
-        stop_price: Stop trigger price for stop or stop_limit orders
-        trail_price: Trailing stop price (dollar based)
-        trail_percent: Trailing stop percentage
-        time_in_force: Time in force (DAY, GTC, OPG, CLS, IOC, FOK)
-        **kwargs: Additional order parameters (currently unused, for future expansion)
+        order_type: market, limit, stop, stop_limit, trailing_stop
+        limit_price: Limit price for limit/stop_limit orders
+        stop_price: Trigger price for stop/stop_limit orders
+        trail_price: Dollar trail for trailing stops
+        trail_percent: Percent trail for trailing stops
+        time_in_force: DAY, GTC, OPG, CLS, IOC, FOK
+        asset_type: Informational label for downstream consumers
+        order_class: Order class (simple, bracket, oco, oto, otoco, mleg)
+        take_profit: Dict with take-profit parameters (limit_price)
+        stop_loss_order: Dict with stop-loss parameters (stop_price / limit_price)
+        legs: Optional list of leg definitions for multi-leg option orders
+        client_order_id: Optional user-defined identifier
 
     Returns:
         str: Formatted order confirmation message
 
     Raises:
-        ValueError: If side is invalid, order_type is unsupported, or
-                   limit_price is missing for limit orders
-
-    Example:
-        >>> # Market buy order
-        >>> place_order("AAPL", 10, "buy")
-        "Order placed: AAPL buy 10 @ market (ID: abc123)"
-
-        >>> # Limit sell order
-        >>> place_order("TSLA", 5, "sell", order_type="limit", limit_price=250.50)
-        "Order placed: TSLA sell 5 @ limit (ID: def456)"
+        ValueError: If invalid combinations or parameters are supplied
     """
     config = get_config()
 
@@ -73,65 +76,77 @@ def place_order(
             f"Invalid side: {side}. Must be 'buy' or 'sell'"
         )
 
-    # Convert side to Alpaca enum
     order_side = OrderSide.BUY if side == "buy" else OrderSide.SELL
 
     tif = _parse_time_in_force(time_in_force)
+
+    leg_requests = _build_option_legs(legs)
+    order_class_enum = _parse_order_class(order_class, leg_requests)
+    take_profit_req = _build_take_profit_request(take_profit)
+    stop_loss_req = _build_stop_loss_request(stop_loss_order)
+
+    base_kwargs = {
+        "qty": qty,
+        "time_in_force": tif,
+    }
+    if leg_requests:
+        base_kwargs["legs"] = leg_requests
+    else:
+        base_kwargs.update({
+            "symbol": symbol,
+            "side": order_side,
+        })
+
+    if client_order_id:
+        base_kwargs["client_order_id"] = client_order_id
+    if order_class_enum:
+        base_kwargs["order_class"] = order_class_enum
+    if take_profit_req:
+        base_kwargs["take_profit"] = take_profit_req
+    if stop_loss_req:
+        base_kwargs["stop_loss"] = stop_loss_req
 
     # Create order request based on type
     order_type = order_type.lower()
     if order_type == "market":
         order_data = MarketOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=order_side,
-            time_in_force=tif
+            **base_kwargs,
         )
     elif order_type == "limit":
         if limit_price is None:
             raise ValueError("limit_price required for limit orders")
-
         order_data = LimitOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=order_side,
-            time_in_force=tif,
-            limit_price=limit_price
+            limit_price=limit_price,
+            **base_kwargs,
         )
     elif order_type == "stop":
+        if leg_requests:
+            raise ValueError("Multi-leg orders support market or limit types only")
         if stop_price is None:
             raise ValueError("stop_price required for stop orders")
-
         order_data = StopOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=order_side,
             stop_price=stop_price,
-            time_in_force=tif,
+            **base_kwargs,
         )
     elif order_type == "stop_limit":
+        if leg_requests:
+            raise ValueError("Multi-leg orders support market or limit types only")
         if stop_price is None or limit_price is None:
             raise ValueError("stop_limit orders require both stop_price and limit_price")
-
         order_data = StopLimitOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=order_side,
             limit_price=limit_price,
             stop_price=stop_price,
-            time_in_force=tif,
+            **base_kwargs,
         )
     elif order_type == "trailing_stop":
+        if leg_requests:
+            raise ValueError("Trailing stops are not supported for multi-leg orders")
         if trail_price is None and trail_percent is None:
             raise ValueError("trailing_stop orders require trail_price or trail_percent")
-
         order_data = TrailingStopOrderRequest(
-            symbol=symbol,
-            qty=qty,
-            side=order_side,
-            time_in_force=tif,
             trail_price=trail_price,
             trail_percent=trail_percent,
+            **base_kwargs,
         )
     else:
         raise ValueError(
@@ -142,10 +157,15 @@ def place_order(
     # Submit order to Alpaca
     order = client.submit_order(order_data)
 
-    # Return formatted confirmation
+    symbol_display = getattr(order, "symbol", None) or "multi-leg"
+    side_display = getattr(order, "side", order_side).name if hasattr(order, "side") else side.upper()
+    qty_display = getattr(order, "qty", qty)
+    order_type_disp = getattr(order, "type", order_type)
+    order_class_disp = getattr(order, "order_class", order_class_enum) or OrderClass.SIMPLE
+
     return (
-        f"Order placed: {order.symbol} {order.side} {order.qty} @ {order.type} "
-        f"(ID: {order.id})"
+        f"Order placed: {symbol_display} {side_display} {qty_display} @ {order_type_disp} "
+        f"(Class: {order_class_disp.name}, Asset: {asset_type.upper()}, ID: {order.id})"
     )
 
 
@@ -235,6 +255,61 @@ def cancel_order(order_id: str) -> str:
 
     client.cancel_order_by_id(order_id)
     return f"Order {order_id} cancelled"
+
+
+def _parse_order_class(value: Optional[str], legs=None) -> Optional[OrderClass]:
+    if legs and not value:
+        return OrderClass.MLEG
+    if not value:
+        return None
+    key = value.upper()
+    try:
+        return OrderClass[key]
+    except KeyError as exc:
+        valid = ", ".join(OrderClass.__members__.keys())
+        raise ValueError(f"Unsupported order_class '{value}'. Supported: {valid}") from exc
+
+
+def _build_take_profit_request(data: Optional[dict]):
+    if not data:
+        return None
+    limit = data.get("limit_price")
+    if limit is None:
+        raise ValueError("take_profit requires limit_price")
+    return TakeProfitRequest(limit_price=float(limit))
+
+
+def _build_stop_loss_request(data: Optional[dict]):
+    if not data:
+        return None
+    stop_price = data.get("stop_price")
+    if stop_price is None:
+        raise ValueError("stop_loss requires stop_price")
+    limit = data.get("limit_price")
+    return StopLossRequest(stop_price=float(stop_price), limit_price=float(limit) if limit else None)
+
+
+def _build_option_legs(legs: Optional[list]):
+    if not legs:
+        return None
+    leg_requests = []
+    for leg in legs:
+        symbol = leg.get("symbol")
+        if not symbol:
+            raise ValueError("Each leg requires a symbol")
+        side_value = leg.get("side", "buy").lower()
+        if side_value not in {"buy", "sell"}:
+            raise ValueError("Leg side must be 'buy' or 'sell'")
+        ratio_qty = int(leg.get("ratio_qty", 1))
+        ratio_qty = max(1, ratio_qty)
+        leg_requests.append(
+            OptionLegRequest(
+                symbol=symbol,
+                side=OrderSide.BUY if side_value == "buy" else OrderSide.SELL,
+                ratio_qty=ratio_qty,
+            )
+        )
+    return leg_requests
 
 
 def _parse_time_in_force(value: Optional[str]) -> TimeInForce:

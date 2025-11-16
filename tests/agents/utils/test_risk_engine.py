@@ -7,19 +7,34 @@ import pytest
 from tradingagents.agents.utils.risk_engine import RiskEngine, RiskInputs
 
 
-def _build_csv(prices, start_date="2024-01-01", base_volume=5_000_000):
+def _build_price_json(prices, start_date="2024-01-01", base_volume=5_000_000):
     start = datetime.strptime(start_date, "%Y-%m-%d")
-    lines = ["Date,Open,High,Low,Close,Volume"]
+    records = []
     for idx, price in enumerate(prices):
         day = start + timedelta(days=idx)
         open_px = round(price * 0.995, 4)
         high = round(price * 1.01, 4)
         low = round(price * 0.99, 4)
         volume = base_volume + idx * 50000
-        lines.append(
-            f"{day.date()},{open_px},{high},{low},{price},{volume}"
+        records.append(
+            {
+                "date": day.strftime("%Y-%m-%d"),
+                "open": open_px,
+                "high": high,
+                "low": low,
+                "close": price,
+                "volume": volume,
+            }
         )
-    return "\n".join(lines)
+    return json.dumps(
+        {
+            "symbol": "TEST",
+            "start_date": start_date,
+            "end_date": (start + timedelta(days=len(prices) - 1)).strftime("%Y-%m-%d"),
+            "source": "unit_test",
+            "records": records,
+        }
+    )
 
 
 SAMPLE_SERIES = {
@@ -29,15 +44,15 @@ SAMPLE_SERIES = {
 }
 
 
-SAMPLE_CSVS = {
-    symbol: _build_csv(prices, base_volume=5_000_000 + idx * 100_000)
+SAMPLE_PAYLOADS = {
+    symbol: _build_price_json(prices, base_volume=5_000_000 + idx * 100_000)
     for idx, (symbol, prices) in enumerate(SAMPLE_SERIES.items())
 }
 
 
 def _fake_vendor(method, symbol, start_date, end_date):
     assert method == "get_stock_data"
-    return SAMPLE_CSVS[symbol]
+    return SAMPLE_PAYLOADS[symbol]
 
 
 @patch("tradingagents.agents.utils.risk_engine.route_to_vendor", side_effect=_fake_vendor)

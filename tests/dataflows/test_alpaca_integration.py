@@ -4,6 +4,7 @@ Integration tests for Alpaca vendor routing through interface.py.
 Tests that Alpaca is properly integrated with the data vendor routing system.
 """
 
+import json
 import pytest
 from unittest.mock import Mock, patch
 from tradingagents.dataflows.interface import route_to_vendor, get_vendor, VENDOR_METHODS
@@ -67,10 +68,9 @@ class TestAlpacaRouting:
                 '2025-01-10'
             )
 
-            # Verify result is a string (CSV format)
-            assert isinstance(result, str)
-            assert '# Stock data for AAPL' in result
-            assert 'Alpaca Markets' in result
+            payload = json.loads(result)
+            assert payload["symbol"] == "AAPL"
+            assert payload["source"] == "alpaca"
 
     def test_route_fallback_from_alpaca_to_yfinance(self, mock_credentials):
         """Test fallback from Alpaca to yfinance on rate limit."""
@@ -113,11 +113,9 @@ class TestAlpacaRouting:
                         '2025-01-10'
                     )
 
-                    # Should successfully fall back to yfinance
-                    assert isinstance(result, str)
-                    assert 'AAPL' in result
-                    # Should have fallen back (yfinance doesn't include Alpaca in header)
-                    assert 'Alpaca Markets' not in result
+                    payload = json.loads(result)
+                    assert payload["source"] == "yfinance"
+                    assert len(payload["records"]) == 1
 
     def test_alpaca_handles_empty_data(self, mock_credentials, mock_config):
         """Test Alpaca handles empty data responses gracefully."""
@@ -133,8 +131,8 @@ class TestAlpacaRouting:
                 '2025-01-10'
             )
 
-            assert isinstance(result, str)
-            assert 'No data found' in result
+            payload = json.loads(result)
+            assert payload["records"] == []
 
     def test_alpaca_authentication_error(self, mock_credentials, mock_config):
         """Test Alpaca handles authentication errors."""
@@ -153,8 +151,8 @@ class TestAlpacaRouting:
                 '2025-01-10'
             )
 
-            # Error should be in result or fallback should work
-            assert isinstance(result, str)
+            payload = json.loads(result)
+            assert payload.get("meta", {}).get("error")
 
     def test_get_vendor_config_for_alpaca(self):
         """Test that vendor configuration recognizes Alpaca."""
@@ -193,8 +191,8 @@ class TestAlpacaDataFormats:
         monkeypatch.setenv("ALPACA_API_KEY", "test_key")
         monkeypatch.setenv("ALPACA_SECRET_KEY", "test_secret")
 
-    def test_get_stock_data_csv_format(self, mock_credentials):
-        """Test that get_stock_data returns properly formatted CSV."""
+    def test_get_stock_data_json_format(self, mock_credentials):
+        """Test that get_stock_data returns properly formatted JSON payload."""
         mock_response = {
             'bars': [
                 {
@@ -216,22 +214,14 @@ class TestAlpacaDataFormats:
             from tradingagents.dataflows.alpaca.data import get_stock_data
             result = get_stock_data('AAPL', '2025-01-10', '2025-01-10')
 
-            # Check header format
-            assert '# Stock data for AAPL' in result
-            assert '# Total records: 1' in result
-            assert '# Data retrieved on:' in result
-            assert '# Data source: Alpaca Markets' in result
-
-            # Check CSV structure
-            lines = result.split('\n')
-            csv_start = None
-            for i, line in enumerate(lines):
-                if line.startswith('Date,'):
-                    csv_start = i
-                    break
-
-            assert csv_start is not None, "CSV header not found"
-            assert 'Date,Open,High,Low,Close,Volume' in lines[csv_start]
+            payload = json.loads(result)
+            assert payload["symbol"] == "AAPL"
+            assert payload["source"] == "alpaca"
+            assert payload["meta"]["record_count"] == 1
+            assert len(payload["records"]) == 1
+            record = payload["records"][0]
+            assert record["close"] == 151.5
+            assert record["volume"] == 1000000
 
     def test_get_latest_quote_dict_format(self, mock_credentials):
         """Test that get_latest_quote returns proper dict format."""

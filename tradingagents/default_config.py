@@ -35,10 +35,10 @@ DEFAULT_CONFIG = {
     # Category-level configuration (default for all tools in category)
     "data_vendors": {
         "core_stock_apis": "alpha_vantage",       # Options: yfinance, alpha_vantage, local
-        "technical_indicators": "alpha_vantage",  # Options: yfinance, alpha_vantage, local
+        "technical_indicators": "local",  # Options: yfinance, alpha_vantage, local
         "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
-        "news_data": "alpha_vantage",        # Options: openai, alpha_vantage, google, local
-        "options_data": "yfinance",          # Options: yfinance
+        "news_data": "google,alpha_vantage",        # Options: openai, alpha_vantage, google, local
+        "options_data": "alpaca",          # Options: yfinance
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {

@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 import json
 from .reddit_utils import fetch_top_from_category
 from tqdm import tqdm
+from .utils import build_price_payload
 
 def get_YFin_data_window(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -80,7 +81,14 @@ def get_YFin_data(
     # remove the index from the dataframe
     filtered_data = filtered_data.reset_index(drop=True)
 
-    return filtered_data
+    return build_price_payload(
+        symbol,
+        start_date,
+        end_date,
+        "local_cache",
+        filtered_data,
+        date_column="Date",
+    )
 
 def get_finnhub_news(
     query: Annotated[str, "Search query or ticker symbol"],

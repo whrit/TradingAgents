@@ -344,6 +344,7 @@ class TradingAgentsGraph:
             "time_in_force": self.config.get("default_time_in_force", "day"),
             "limit_price": self.config.get("default_limit_price"),
             "instrument_type": self.config.get("trade_instrument_type", "shares"),
+            "asset_type": "equity",
         }
         return instruction
 

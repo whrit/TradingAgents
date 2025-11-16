@@ -4,6 +4,7 @@ Unit tests for Alpaca data vendor integration.
 Tests market data retrieval functions following TDD approach.
 """
 
+import json
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
@@ -158,15 +159,12 @@ class TestGetStockData:
 
             result = get_stock_data('AAPL', '2025-01-10', '2025-01-11')
 
-            # Verify it returns a string (CSV format)
-            assert isinstance(result, str)
-            # Verify header is present
-            assert '# Stock data for AAPL' in result
-            assert '# Total records: 2' in result
-            # Verify CSV content
-            assert 'Date,Open,High,Low,Close,Volume' in result
-            assert '150.0' in result or '150.00' in result
-            assert '151.5' in result or '151.50' in result
+            payload = json.loads(result)
+            assert payload["symbol"] == "AAPL"
+            assert payload["source"] == "alpaca"
+            assert payload["meta"]["record_count"] == 2
+            assert len(payload["records"]) == 2
+            assert payload["records"][0]["close"] == mock_alpaca_response["bars"][0]["c"]
 
     def test_get_stock_data_no_data(self, monkeypatch):
         """Test handling when no data is returned."""
@@ -179,7 +177,9 @@ class TestGetStockData:
             mock_get_client.return_value = mock_client
 
             result = get_stock_data('INVALID', '2025-01-10', '2025-01-11')
-            assert 'No data found' in result
+            payload = json.loads(result)
+            assert payload["records"] == []
+            assert payload["meta"]["record_count"] == 0
 
     def test_get_stock_data_invalid_date_format(self):
         """Test that invalid date format raises error."""
@@ -274,10 +274,10 @@ class TestGetBars:
 
             result = get_bars('AAPL', '1Hour', '2025-01-14', '2025-01-14')
 
-            assert isinstance(result, str)
-            assert '# Bar data for AAPL' in result
-            assert '1Hour' in result
-            assert 'Timestamp,Open,High,Low,Close,Volume' in result
+            payload = json.loads(result)
+            assert payload["symbol"] == "AAPL"
+            assert payload["meta"]["timeframe"] == '1Hour'
+            assert len(payload["records"]) == 1
 
     def test_get_bars_no_data(self, monkeypatch):
         """Test handling when no bars are returned."""
@@ -290,4 +290,6 @@ class TestGetBars:
             mock_get_client.return_value = mock_client
 
             result = get_bars('AAPL', '1Day', '2025-01-14', '2025-01-14')
-            assert 'No bar data found' in result
+            payload = json.loads(result)
+            assert payload["records"] == []
+            assert payload["meta"]["record_count"] == 0

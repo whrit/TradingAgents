@@ -4,6 +4,7 @@ End-to-end test for Alpaca data vendor integration.
 Verifies the complete flow from configuration to data retrieval.
 """
 
+import json
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
@@ -80,16 +81,11 @@ class TestAlpacaEndToEnd:
                     '2025-01-12'
                 )
 
-                # Verify result
-                assert isinstance(result, str)
-                assert '# Stock data for AAPL' in result
-                assert '# Total records: 3' in result
-                assert 'Alpaca Markets' in result
-
-                # Verify CSV structure
-                assert 'Date,Open,High,Low,Close,Volume' in result
-                assert '150.0' in result or '150.00' in result
-                assert '153.5' in result or '153.50' in result
+                payload = json.loads(result)
+                assert payload["symbol"] == "AAPL"
+                assert payload["meta"]["record_count"] == 3
+                assert len(payload["records"]) == 3
+                assert payload["records"][0]["close"] == 151.5
 
     def test_fallback_chain_alpaca_to_yfinance(self, mock_env):
         """Test fallback from Alpaca to yfinance when Alpaca fails."""
@@ -134,11 +130,10 @@ class TestAlpacaEndToEnd:
                         '2025-01-12'
                     )
 
-                    # Should succeed with yfinance fallback
-                    assert isinstance(result, str)
-                    assert 'AAPL' in result
-                    # Should NOT have Alpaca in header (using yfinance)
-                    assert 'Alpaca Markets' not in result
+                    payload = json.loads(result)
+                    assert payload["symbol"] == "AAPL"
+                    assert payload["source"] == "yfinance"
+                    assert len(payload["records"]) == 3
 
     def test_multi_vendor_configuration(self, mock_env, sample_alpaca_bars):
         """Test using multiple vendors in configuration."""
@@ -166,9 +161,8 @@ class TestAlpacaEndToEnd:
                     '2025-01-12'
                 )
 
-                # Should use first successful vendor (Alpaca)
-                assert isinstance(result, str)
-                assert 'AAPL' in result
+                payload = json.loads(result)
+                assert payload["source"] == "alpaca"
 
     def test_alpaca_with_real_like_error_handling(self, mock_env):
         """Test realistic error scenarios."""
@@ -195,7 +189,8 @@ class TestAlpacaEndToEnd:
                     '2025-01-12'
                 )
 
-                assert 'No data found' in result
+                payload = json.loads(result)
+                assert payload["records"] == []
 
     def test_alpaca_data_consistency_with_yfinance(self, mock_env):
         """Test that Alpaca returns data in the same format as yfinance."""
@@ -239,17 +234,16 @@ class TestAlpacaEndToEnd:
             from tradingagents.dataflows.y_finance import get_YFin_data_online
             yfinance_result = get_YFin_data_online('AAPL', '2025-01-10', '2025-01-10')
 
-        # Both should be strings
-        assert isinstance(alpaca_result, str)
-        assert isinstance(yfinance_result, str)
+        alpaca_payload = json.loads(alpaca_result)
+        yfinance_payload = json.loads(yfinance_result)
 
-        # Both should have headers
-        assert alpaca_result.startswith('#')
-        assert yfinance_result.startswith('#')
-
-        # Both should have CSV content with OHLCV columns
-        assert 'Date,Open,High,Low,Close,Volume' in alpaca_result
-        assert 'Open,High,Low,Close' in yfinance_result  # yfinance uses index for Date
+        assert alpaca_payload["symbol"] == "AAPL"
+        assert yfinance_payload["symbol"] == "AAPL"
+        assert alpaca_payload["source"] == "alpaca"
+        assert yfinance_payload["source"] == "yfinance"
+        assert alpaca_payload["records"][0]["close"] == pytest.approx(
+            yfinance_payload["records"][0]["close"]
+        )
 
     def test_credentials_from_environment(self, mock_env):
         """Test that Alpaca correctly reads credentials from environment."""

@@ -1,6 +1,19 @@
+import json
 from datetime import datetime, timedelta
 
 from .alpha_vantage_common import _make_api_request, format_datetime_for_api
+
+def _require_feed(response_text: str, context: str) -> str:
+    try:
+        payload = json.loads(response_text)
+    except json.JSONDecodeError:
+        return response_text
+
+    feed = payload.get("feed") or []
+    if not feed:
+        raise ValueError(f"Alpha Vantage returned no {context} articles.")
+    return response_text
+
 
 def get_news(ticker, start_date, end_date) -> dict[str, str] | str:
     """Returns live and historical market news & sentiment data from premier news outlets worldwide.
@@ -24,7 +37,8 @@ def get_news(ticker, start_date, end_date) -> dict[str, str] | str:
         "limit": "50",
     }
     
-    return _make_api_request("NEWS_SENTIMENT", params)
+    response = _make_api_request("NEWS_SENTIMENT", params)
+    return _require_feed(response, "ticker")
 
 def get_insider_transactions(symbol: str) -> dict[str, str] | str:
     """Returns latest and historical insider transactions by key stakeholders.
@@ -59,4 +73,5 @@ def get_global_news(curr_date: str, look_back_days: int = 7, limit: int = 5) -> 
         "limit": str(limit),
     }
 
-    return _make_api_request("NEWS_SENTIMENT", params)
+    response = _make_api_request("NEWS_SENTIMENT", params)
+    return _require_feed(response, "macro")

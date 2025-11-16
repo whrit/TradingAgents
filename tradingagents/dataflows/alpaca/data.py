@@ -1,4 +1,4 @@
-"""Alpaca data vendor utilities supporting both legacy CSV and DataFrame outputs."""
+"""Alpaca data vendor utilities for JSON and DataFrame outputs."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from .common import (
     AlpacaRateLimitError,
     AlpacaAPIError,
 )
+from ..utils import build_price_payload
 
 
 DEFAULT_COLUMNS = ["Open", "High", "Low", "Close", "Volume"]
@@ -106,9 +107,40 @@ def _bars_to_dataframe(bars) -> pd.DataFrame:
     return df.sort_index()
 
 
-def _dataframe_to_csv(df: pd.DataFrame, header: str) -> str:
-    csv_body = df.to_csv(date_format="%Y-%m-%d", float_format="%.2f") if not df.empty else ""
-    return f"{header}\n{csv_body}" if csv_body else f"{header}\n"
+def _dataframe_to_json_payload(
+    df: pd.DataFrame,
+    symbol: str,
+    start_date: str,
+    end_date: str,
+    source: str,
+    metadata: Optional[dict] = None,
+):
+    df_for_json = df.reset_index()
+    date_col = df.index.name or "index"
+    if date_col not in df_for_json.columns:
+        date_col = "Date" if "Date" in df_for_json.columns else df_for_json.columns[0]
+    return build_price_payload(
+        symbol,
+        start_date,
+        end_date,
+        source,
+        df_for_json,
+        date_column=date_col,
+        metadata=metadata,
+    )
+
+
+def _empty_price_payload(symbol: str, start_date: str, end_date: str, source: str, metadata: Optional[dict] = None) -> str:
+    empty_df = pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume"])
+    return build_price_payload(
+        symbol,
+        start_date,
+        end_date,
+        source,
+        empty_df,
+        date_column="date",
+        metadata=metadata,
+    )
 
 
 def _resolve_client(as_dataframe: bool):
@@ -179,27 +211,41 @@ def get_stock_data(
     symbol = _validate_symbol(symbol)
     start = _parse_date(start_date)
     end = _parse_date(end_date)
+    start_label = start.strftime("%Y-%m-%d")
+    end_label = end.strftime("%Y-%m-%d")
     if start > end:
         raise ValueError("start_date must be before end_date")
 
     timeframe = _map_interval(interval)
     client, use_sdk = _resolve_client(as_dataframe)
-    bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
-    df = _bars_to_dataframe(bars)
+    try:
+        bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
+        df = _bars_to_dataframe(bars)
+    except AlpacaAPIError as exc:
+        if isinstance(exc, AlpacaRateLimitError):
+            raise
+        if as_dataframe:
+            raise
+        return _empty_price_payload(
+            symbol,
+            start_label,
+            end_label,
+            "alpaca",
+            metadata={"error": str(exc), "record_count": 0},
+        )
 
     if as_dataframe:
         return df
 
-    if df.empty:
-        return f"No data found for symbol '{symbol}' between {start_date} and {end_date}"
-
-    header = (
-        f"# Stock data for {symbol} from {start_date} to {end_date}\n"
-        f"# Total records: {len(df)}\n"
-        f"# Data source: Alpaca Markets\n"
+    metadata = {"record_count": len(df)}
+    return _dataframe_to_json_payload(
+        df,
+        symbol,
+        start_label,
+        end_label,
+        "alpaca",
+        metadata=metadata,
     )
-    df_for_csv = df.reset_index().rename(columns={"index": "Date"})
-    return _dataframe_to_csv(df_for_csv.set_index("Date"), header)
 
 
 def get_latest_quote(symbol: str) -> dict:
@@ -234,23 +280,37 @@ def get_bars(
     symbol = _validate_symbol(symbol)
     start = _parse_date(start_date)
     end = _parse_date(end_date)
+    start_label = start.strftime("%Y-%m-%d")
+    end_label = end.strftime("%Y-%m-%d")
     if start > end:
         raise ValueError("start_date must be before end_date")
 
     client, use_sdk = _resolve_client(as_dataframe)
-    bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
-    df = _bars_to_dataframe(bars)
+    try:
+        bars = _fetch_bars(client, symbol, timeframe, start, end, use_sdk, max_retries)
+        df = _bars_to_dataframe(bars)
+    except AlpacaAPIError as exc:
+        if isinstance(exc, AlpacaRateLimitError):
+            raise
+        if as_dataframe:
+            raise
+        return _empty_price_payload(
+            symbol,
+            start_label,
+            end_label,
+            "alpaca",
+            metadata={"timeframe": timeframe, "record_count": 0, "error": str(exc)},
+        )
 
     if as_dataframe:
         return df
 
-    if df.empty:
-        return f"No bar data found for {symbol} ({timeframe})"
-
-    header = (
-        f"# Bar data for {symbol} ({timeframe})\n"
-        f"# Records: {len(df)}\n"
-        f"# Data source: Alpaca Markets\n"
+    metadata = {"timeframe": timeframe, "record_count": len(df)}
+    return _dataframe_to_json_payload(
+        df,
+        symbol,
+        start_label,
+        end_label,
+        "alpaca",
+        metadata=metadata,
     )
-    df_for_csv = df.reset_index().rename(columns={"Date": "Timestamp"})
-    return _dataframe_to_csv(df_for_csv.set_index("Timestamp"), header)

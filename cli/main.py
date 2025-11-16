@@ -1,9 +1,12 @@
 from typing import Optional
 import datetime
 import json
+import math
 import typer
+import uuid
 from pathlib import Path
 from functools import wraps
+from statistics import fmean
 from rich.console import Console, Group
 from dotenv import load_dotenv
 
@@ -29,6 +32,7 @@ import yfinance as yf
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.brokers.interface import route_to_broker
+from tradingagents.dataflows.interface import route_to_vendor
 from cli.models import AnalystType
 from cli.utils import *
 
@@ -274,6 +278,15 @@ def format_currency(value):
         return str(value)
 
 
+def format_percent(value):
+    if value is None:
+        return "—"
+    try:
+        return f"{float(value):+.2f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
 def render_live_cost_panel():
     summary = message_buffer.live_metrics.get("costs")
     currency = (summary or {}).get("currency", "USD")
@@ -414,6 +427,210 @@ def _make_bar(value: float, max_value: float, width: int = 20) -> str:
     return "▇" * blocks
 
 
+SPARKLINE_BLOCKS = "▁▂▃▄▅▆▇█"
+
+
+def _sparkline(points):
+    values = [float(p) for p in points if p is not None]
+    if not values:
+        return "n/a"
+    minimum = min(values)
+    maximum = max(values)
+    if math.isclose(maximum, minimum):
+        return "─" * len(values)
+    span = maximum - minimum
+    chars = []
+    for value in values:
+        normalized = (value - minimum) / span
+        index = int(round(normalized * (len(SPARKLINE_BLOCKS) - 1)))
+        index = max(0, min(index, len(SPARKLINE_BLOCKS) - 1))
+        chars.append(SPARKLINE_BLOCKS[index])
+    return "".join(chars)
+
+
+def _pct_change(series, window):
+    if series is None or len(series) <= window:
+        return None
+    earlier = float(series.iloc[-window - 1])
+    latest = float(series.iloc[-1])
+    if earlier == 0:
+        return None
+    return ((latest / earlier) - 1) * 100
+
+
+def build_price_visuals(ticker: str):
+    try:
+        hist = yf.Ticker(ticker).history(period="1mo", interval="1d")
+    except Exception as exc:  # pragma: no cover - network
+        message = f"Failed to load price history: {exc}"
+        return Panel(message, title="Price Action", border_style="red"), None
+
+    if hist is None or hist.empty:
+        return Panel("No price history available.", title="Price Action", border_style="red"), None
+
+    closes = hist["Close"].dropna()
+    latest_price = float(closes.iloc[-1]) if not closes.empty else None
+    trend = closes.tail(20)
+    spark = _sparkline(trend.tolist())
+
+    spark_panel = Panel(
+        Align.center(Text(spark, style="bold green")),
+        title="30-Day Trend",
+        border_style="green",
+    )
+
+    stats = Table(box=box.MINIMAL, show_header=False, expand=True)
+    stats.add_row("Last Close", format_currency(latest_price))
+    stats.add_row("1D", format_percent(_pct_change(closes, 1)))
+    stats.add_row("5D", format_percent(_pct_change(closes, 5)))
+    stats.add_row("1M", format_percent(_pct_change(closes, len(closes) - 1)))
+
+    returns = closes.pct_change().dropna()
+    realized_vol = None
+    if not returns.empty:
+        realized_vol = returns.std() * math.sqrt(252) * 100
+
+    vol_table = Table(box=box.MINIMAL, show_header=False, expand=True)
+    vol_table.add_row("Realized Vol (ann.)", format_percent(realized_vol))
+    vol_table.add_row("Observations", str(len(closes)))
+
+    combined = Columns([stats, vol_table], equal=True, expand=True)
+    body = Group(spark_panel, combined)
+    return Panel(body, title=f"Price Action — {ticker.upper()}", border_style="cyan"), latest_price
+
+
+def _summarize_option_rows(rows, title):
+    table = Table(title=title, box=box.SIMPLE_HEAD, expand=True)
+    table.add_column("Contract", style="cyan")
+    table.add_column("Strike", justify="right")
+    table.add_column("Last", justify="right")
+    table.add_column("IV", justify="right")
+    table.add_column("OI", justify="right")
+    for row in rows[:3]:
+        iv = row.get("impliedVolatility")
+        iv_pct = format_percent((iv or 0) * 100 if iv and iv > 1 else (iv or 0) * 100)
+        table.add_row(
+            str(row.get("contractSymbol", "—")),
+            f"{row.get('strike', 0):,.2f}",
+            f"{row.get('lastPrice', 0):,.2f}",
+            iv_pct,
+            f"{int(row.get('openInterest', 0)):,}",
+        )
+    if not rows:
+        table.add_row("—", "—", "—", "—", "—")
+    return table
+
+
+def build_options_visuals(ticker: str, ref_price: Optional[float]):
+    snapshot = None
+    try:
+        raw = route_to_vendor("get_options_data", ticker.upper(), None, 6)
+        snapshot = json.loads(raw) if raw else {}
+    except Exception as exc:  # pragma: no cover - network
+        message = f"Failed to load options data: {exc}"
+        return Panel(message, title="Options & Volatility", border_style="red"), snapshot
+
+    calls = snapshot.get("calls", []) or []
+    puts = snapshot.get("puts", []) or []
+    if not calls and not puts:
+        return Panel("Options chain unavailable.", title="Options & Volatility", border_style="red"), snapshot
+
+    calls_table = _summarize_option_rows(calls, "Top Calls")
+    puts_table = _summarize_option_rows(puts, "Top Puts")
+
+    call_iv = [row.get("impliedVolatility") for row in calls if row.get("impliedVolatility")]
+    put_iv = [row.get("impliedVolatility") for row in puts if row.get("impliedVolatility")]
+    call_oi = sum(row.get("openInterest", 0) or 0 for row in calls)
+    put_oi = sum(row.get("openInterest", 0) or 0 for row in puts)
+
+    summary = Table(title="Volatility Snapshot", box=box.SIMPLE_HEAD, expand=True, show_header=False)
+    summary.add_row("Expiry", snapshot.get("expiry", "—"))
+    summary.add_row("Avg Call IV", format_percent((fmean(call_iv) * 100) if call_iv else None))
+    summary.add_row("Avg Put IV", format_percent((fmean(put_iv) * 100) if put_iv else None))
+    ratio = (call_oi / put_oi) if put_oi else None
+    summary.add_row("Call/Put OI", f"{ratio:.2f}" if ratio is not None else "—")
+    summary.add_row("Ref Price", format_currency(ref_price))
+
+    visuals = Columns([calls_table, puts_table, summary], equal=True, expand=True)
+    panel = Panel(visuals, title="Options & Volatility", border_style="magenta", padding=(1, 1))
+    return panel, snapshot
+
+
+def _infer_option_from_snapshot(snapshot, preferred_side: str):
+    if not snapshot:
+        return None
+    option_type = "call" if preferred_side == "buy" else "put"
+    collection = snapshot.get("calls" if option_type == "call" else "puts", [])
+    if not collection:
+        return None
+    candidate = collection[0]
+    return {
+        "option_type": option_type,
+        "strike": candidate.get("strike"),
+        "premium": candidate.get("lastPrice") or candidate.get("ask") or candidate.get("bid"),
+        "contract_symbol": candidate.get("contractSymbol"),
+        "implied_vol": candidate.get("impliedVolatility"),
+        "expiry": snapshot.get("expiry"),
+        "multiplier": 100,
+    }
+
+
+def build_payoff_panel(final_state, ref_price: Optional[float], options_snapshot: Optional[dict]):
+    trade = final_state.get("proposed_trade")
+    if not trade:
+        return None
+
+    quantity = float(trade.get("quantity") or 0)
+    if quantity == 0:
+        return None
+
+    action = trade.get("action", "buy").lower()
+    direction = 1 if action == "buy" else -1
+    instrument = trade.get("instrument_type", "shares")
+    payoff_table = Table(title="Scenario PnL", box=box.SIMPLE_HEAD, expand=True)
+    payoff_table.add_column("Move", justify="right")
+    payoff_table.add_column("Price", justify="right")
+    payoff_table.add_column("PnL", justify="right")
+    steps = [-0.1, -0.05, 0.0, 0.05, 0.1]
+
+    if instrument == "shares":
+        if ref_price is None:
+            return None
+        for move in steps:
+            scenario_price = ref_price * (1 + move)
+            pnl = direction * quantity * (scenario_price - ref_price)
+            payoff_table.add_row(format_percent(move * 100), format_currency(scenario_price), format_currency(pnl))
+        title = "Equity Payoff"
+        info = f"Qty: {quantity:.2f} shares"
+    else:
+        derivative = trade.get("derivative_details") or _infer_option_from_snapshot(options_snapshot, action)
+        if not derivative:
+            return None
+        strike = derivative.get("strike")
+        premium = derivative.get("premium")
+        if strike is None or premium is None or ref_price is None:
+            return None
+        multiplier = derivative.get("multiplier", 100)
+        opt_type = derivative.get("option_type", "call")
+        for move in steps:
+            scenario_price = ref_price * (1 + move)
+            if opt_type == "call":
+                intrinsic = max(0.0, scenario_price - strike)
+            else:
+                intrinsic = max(0.0, strike - scenario_price)
+            payoff = (intrinsic - premium) * multiplier * quantity * direction
+            payoff_table.add_row(format_percent(move * 100), format_currency(scenario_price), format_currency(payoff))
+        title = f"Options Payoff ({opt_type.title()})"
+        info = f"Contract: {derivative.get('contract_symbol', '—')} | Strike {strike:.2f} | Premium {premium:.2f}"
+
+    return Panel(
+        Group(payoff_table, Text(info, style="dim")),
+        title=title,
+        border_style="yellow",
+        padding=(1, 1),
+    )
+
+
 def render_risk_visuals(final_state):
     metrics_blob = final_state.get("risk_metrics_json")
     if not metrics_blob:
@@ -490,7 +707,99 @@ def render_risk_visuals(final_state):
         equal=True,
         expand=True,
     )
-    return Panel(visuals, title="VIII. Risk Visuals", border_style="cyan", padding=(1, 1))
+    return Panel(visuals, title="IX. Risk Visuals", border_style="cyan", padding=(1, 1))
+
+
+def _prompt_optional_float(message: str, default: Optional[float] = None) -> Optional[float]:
+    prompt_default = "" if default is None else str(default)
+    while True:
+        raw = typer.prompt(message, default=prompt_default)
+        raw = raw.strip()
+        if not raw:
+            return default
+        try:
+            return float(raw.replace("%", ""))
+        except ValueError:
+            console.print("[red]Please enter a valid number or leave blank to skip.[/red]")
+
+
+def _customize_order(trade: dict) -> dict:
+    console.print("[cyan]Customize order parameters[/cyan]")
+    order_type_default = trade.get("order_type", "market")
+    order_type = typer.prompt(
+        "Order type [market/limit/stop/stop_limit/trailing_stop]",
+        default=order_type_default,
+    ).strip()
+    if order_type:
+        trade["order_type"] = order_type.lower()
+
+    if trade["order_type"] in {"limit", "stop_limit"}:
+        trade["limit_price"] = _prompt_optional_float(
+            "Limit price",
+            trade.get("limit_price"),
+        )
+
+    if trade["order_type"] in {"stop", "stop_limit"}:
+        trade["stop_price"] = _prompt_optional_float(
+            "Stop trigger price",
+            trade.get("stop_price"),
+        )
+
+    if trade["order_type"] == "trailing_stop":
+        trail_raw = typer.prompt(
+            "Trail amount (append % for percent)",
+            default="5%",
+        ).strip()
+        if trail_raw.endswith("%"):
+            trade["trail_percent"] = float(trail_raw[:-1])
+            trade["trail_price"] = None
+        else:
+            trade["trail_price"] = float(trail_raw)
+            trade["trail_percent"] = None
+
+    tif_default = trade.get("time_in_force", "day").upper()
+    tif = typer.prompt(
+        "Time in force (DAY/GTC/OPG/CLS/IOC/FOK)",
+        default=tif_default,
+    ).strip()
+    if tif:
+        trade["time_in_force"] = tif.lower()
+
+    order_class_default = trade.get("order_class", "simple")
+    order_class_value = typer.prompt(
+        "Order class (simple/bracket/oco/oto/otoco/mleg)",
+        default=order_class_default,
+    ).strip()
+    if order_class_value:
+        trade["order_class"] = order_class_value.lower()
+
+    if typer.confirm("Attach take-profit target?", default=False):
+        tp_price = _prompt_optional_float(
+            "Take profit limit price",
+            (trade.get("take_profit") or {}).get("limit_price"),
+        )
+        if tp_price is not None:
+            trade["take_profit"] = {"limit_price": tp_price}
+
+    if typer.confirm("Attach stop-loss guard?", default=False):
+        stop_loss_price = _prompt_optional_float(
+            "Stop loss trigger price",
+            (trade.get("stop_loss_order") or {}).get("stop_price"),
+        )
+        limit_cap = _prompt_optional_float(
+            "Optional stop-loss limit price",
+            (trade.get("stop_loss_order") or {}).get("limit_price"),
+        )
+        if stop_loss_price is not None:
+            trade["stop_loss_order"] = {
+                "stop_price": stop_loss_price,
+                "limit_price": limit_cap,
+            }
+
+    if typer.confirm("Generate a client_order_id for tracking?", default=True):
+        trade["client_order_id"] = trade.get("client_order_id") or f"cli_{uuid.uuid4().hex[:8]}"
+
+    return trade
 
 
 def fetch_positions_snapshot():
@@ -1111,7 +1420,34 @@ def display_complete_report(final_state):
             )
         )
 
-    # IV. Risk Management Team Reports
+    visuals = []
+    latest_price = None
+    options_snapshot = None
+    ticker = final_state.get("company_of_interest")
+    if ticker:
+        price_panel, latest_price = build_price_visuals(ticker)
+        if price_panel:
+            visuals.append(price_panel)
+        options_panel, options_snapshot = build_options_visuals(
+            ticker, latest_price
+        )
+        if options_panel:
+            visuals.append(options_panel)
+    payoff_panel = build_payoff_panel(final_state, latest_price, options_snapshot)
+    if payoff_panel:
+        visuals.append(payoff_panel)
+
+    if visuals:
+        console.print(
+            Panel(
+                Columns(visuals, equal=True, expand=True),
+                title="IV. Market Visuals & Payoffs",
+                border_style="cyan",
+                padding=(1, 2),
+            )
+        )
+
+    # V. Risk Management Team Reports
     if final_state.get("risk_debate_state"):
         risk_reports = []
         risk_state = final_state["risk_debate_state"]
@@ -1153,13 +1489,13 @@ def display_complete_report(final_state):
             console.print(
                 Panel(
                     Columns(risk_reports, equal=True, expand=True),
-                    title="IV. Risk Management Team Decision",
+                    title="V. Risk Management Team Decision",
                     border_style="red",
                     padding=(1, 2),
                 )
             )
 
-        # V. Portfolio Manager Decision
+        # VI. Portfolio Manager Decision
         if risk_state.get("judge_decision"):
             console.print(
                 Panel(
@@ -1169,13 +1505,13 @@ def display_complete_report(final_state):
                         border_style="blue",
                         padding=(1, 2),
                     ),
-                    title="V. Portfolio Manager Decision",
+                    title="VI. Portfolio Manager Decision",
                     border_style="green",
                     padding=(1, 2),
                 )
             )
 
-    # VI. Execution & Compliance
+    # VII. Execution & Compliance
     exec_panels = []
     if final_state.get("execution_plan"):
         exec_panels.append(
@@ -1199,13 +1535,13 @@ def display_complete_report(final_state):
         console.print(
             Panel(
                 Columns(exec_panels, equal=True, expand=True),
-                title="VI. Execution & Compliance",
+                title="VII. Execution & Compliance",
                 border_style="white",
                 padding=(1, 2),
             )
         )
 
-    # VII. Run Cost Summary
+    # VIII. Run Cost Summary
     cost_stats = final_state.get("cost_statistics")
     if cost_stats:
         currency = cost_stats.get("currency", "USD")
@@ -1256,7 +1592,7 @@ def display_complete_report(final_state):
         console.print(
             Panel(
                 Columns([models_table, sections_table], equal=True, expand=True),
-                title=f"VII. Run Cost Summary — Total {currency} {total_cost:,.4f}",
+                title=f"VIII. Run Cost Summary — Total {currency} {total_cost:,.4f}",
                 border_style="yellow",
                 padding=(1, 2),
             )
@@ -1286,24 +1622,43 @@ def prompt_trade_execution(final_state, config):
     instrument = config.get("trade_instrument_type", "shares")
     instrument_label = instrument.replace("_", " ").title()
     multiplier = config.get("trade_size_multiplier", 1.0)
+    asset_type = trade.get("asset_type", "equity")
+    units = "contracts" if asset_type == "option" else "shares"
+    symbol_display = trade.get("symbol")
+    underlying = trade.get("underlying_symbol")
+    derivative = trade.get("derivative_details")
 
     console.print(
         Panel(
             f"Trader recommends to [bold]{trade['action'].upper()}[/bold] "
-            f"{trade['quantity']} shares of {trade['symbol']} using "
+            f"{trade['quantity']} {units} of {symbol_display} using "
             f"{trade.get('order_type','market').upper()} / "
             f"{trade.get('time_in_force','day').upper()}.\n"
-            f"Instrument preference: [bold]{instrument_label}[/bold] (size x{multiplier}).\n\n"
+            f"Instrument preference: [bold]{instrument_label}[/bold] (size x{multiplier}).\n"
+            f"Asset type: {asset_type.title()}"
+            f"{f' | Underlying: {underlying}' if underlying else ''}.\n\n"
             f"Execution notes:\n{final_state.get('execution_plan','(none)')}",
             title="Proposed Trade",
             border_style="yellow",
         )
     )
 
-    if instrument != "shares":
+    if derivative:
+        option_table = Table(box=box.MINIMAL, show_header=False, title="Option Contract")
+        option_table.add_row("Contract", derivative.get("contract_symbol", "—"))
+        option_table.add_row("Strike", format_currency(derivative.get("strike")))
+        option_table.add_row("Premium", format_currency(derivative.get("premium")))
+        option_table.add_row("Expiry", derivative.get("expiry", "—"))
+        option_table.add_row("IV", format_percent((derivative.get("implied_vol") or 0) * 100))
+        console.print(option_table)
+
+    if asset_type == "option":
         console.print(
-            "[yellow]Note: Non-equity instruments require manual execution. Broker auto-routing is disabled for this selection.[/yellow]"
+            "[yellow]Ensure your Alpaca account has options permissions before routing this order.[/yellow]"
         )
+
+    if typer.confirm("Customize order parameters before routing?", default=False):
+        trade = _customize_order(trade)
 
     if typer.confirm("Do you approve and want to route this trade?", default=False):
         try:
@@ -1315,6 +1670,15 @@ def prompt_trade_execution(final_state, config):
                 order_type=trade.get("order_type", "market"),
                 time_in_force=trade.get("time_in_force", "day"),
                 limit_price=trade.get("limit_price"),
+                stop_price=trade.get("stop_price"),
+                trail_price=trade.get("trail_price"),
+                trail_percent=trade.get("trail_percent"),
+                asset_type=trade.get("asset_type", "equity"),
+                order_class=trade.get("order_class"),
+                take_profit=trade.get("take_profit"),
+                stop_loss_order=trade.get("stop_loss_order"),
+                legs=trade.get("legs"),
+                client_order_id=trade.get("client_order_id"),
             )
             console.print(
                 f"[green]Trade executed: {result}[/green]"

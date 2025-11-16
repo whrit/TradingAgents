@@ -5,6 +5,7 @@ from typing import Dict
 import pandas as pd
 
 from .alpha_vantage_common import _make_api_request
+from .utils import build_price_payload
 
 _STOCK_CACHE: Dict[str, pd.DataFrame] = {}
 
@@ -67,7 +68,7 @@ def get_stock(symbol: str, start_date: str, end_date: str) -> str:
         end_date: End date in yyyy-mm-dd format
 
     Returns:
-        CSV string containing the daily adjusted time series data filtered to the date range.
+        JSON string containing the daily adjusted time series data filtered to the date range.
     """
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(end_date, "%Y-%m-%d")
@@ -77,7 +78,13 @@ def get_stock(symbol: str, start_date: str, end_date: str) -> str:
     df = _fetch_symbol_timeseries(symbol)
     filtered = _filter_dataframe_by_date_range(df, start_dt, end_dt)
     if filtered.empty:
-        return ""
+        filtered = df.iloc[0:0]
 
-    filtered = filtered.assign(date=filtered["date"].dt.strftime("%Y-%m-%d"))
-    return filtered.to_csv(index=False)
+    return build_price_payload(
+        symbol,
+        start_date,
+        end_date,
+        "alpha_vantage",
+        filtered,
+        date_column="date",
+    )

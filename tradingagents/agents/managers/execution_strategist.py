@@ -1,6 +1,63 @@
+import json
 from typing import Optional
 from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.interface import route_to_vendor
+
+
+def _load_options_snapshot(ticker: str, limit: int = 5):
+    try:
+        raw = route_to_vendor("get_options_data", ticker, None, limit)
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def _select_option_contract(snapshot, action: str):
+    if not snapshot:
+        return None
+    option_type = "call" if action == "buy" else "put"
+    contracts = snapshot.get("calls" if option_type == "call" else "puts", [])
+    return (option_type, contracts[0]) if contracts else None
+
+
+def _build_option_instruction(ticker: str, base_instruction: dict, snapshot):
+    selection = _select_option_contract(snapshot, base_instruction.get("action", "buy"))
+    if not selection:
+        return None, ""
+    option_type, contract = selection
+    premium = contract.get("ask") or contract.get("lastPrice")
+    if premium is None:
+        return None, ""
+
+    quantity = max(1, int(round(base_instruction.get("quantity", 1))))
+    derivative_details = {
+        "option_type": option_type,
+        "strike": contract.get("strike"),
+        "premium": float(premium),
+        "contract_symbol": contract.get("contractSymbol"),
+        "implied_vol": contract.get("impliedVolatility"),
+        "expiry": snapshot.get("expiry"),
+        "multiplier": 100,
+    }
+
+    instruction = {
+        "symbol": contract.get("contractSymbol"),
+        "underlying_symbol": ticker,
+        "action": base_instruction.get("action"),
+        "quantity": quantity,
+        "order_type": "limit",
+        "time_in_force": base_instruction.get("time_in_force", "day"),
+        "limit_price": float(premium),
+        "instrument_type": base_instruction.get("instrument_type", "options"),
+        "asset_type": "option",
+        "derivative_details": derivative_details,
+        "option_strategy": f"Single {option_type.title()} ({snapshot.get('expiry', 'n/a')})",
+    }
+    summary = (
+        f"{instruction['symbol']} strike {derivative_details['strike']} premium {premium} "
+        f"({option_type}, exp {snapshot.get('expiry', 'n/a')})"
+    )
+    return instruction, summary
 
 
 def create_execution_strategist(llm):
@@ -32,20 +89,25 @@ def create_execution_strategist(llm):
                 "time_in_force": config.get("default_time_in_force", "day"),
                 "limit_price": config.get("default_limit_price"),
                 "instrument_type": instrument_type,
+                "asset_type": "equity",
             }
 
         options_context = ""
-        if instrument_type != "shares":
-            try:
-                options_snapshot = route_to_vendor(
-                    "get_options_data",
-                    ticker,
-                    None,
-                    5,
+        options_snapshot = None
+        if instruction and instrument_type != "shares":
+            options_snapshot = _load_options_snapshot(ticker)
+            option_instruction = None
+            summary_text = ""
+            if options_snapshot:
+                option_instruction, summary_text = _build_option_instruction(
+                    ticker, instruction, options_snapshot
                 )
-            except Exception as exc:
-                options_snapshot = f"Unavailable (error: {exc})"
-            options_context = f"\nOptions Snapshot:\n{options_snapshot}\n"
+            if option_instruction:
+                instruction = option_instruction
+            options_context = (
+                "\nOptions Snapshot:\n"
+                f"{summary_text or json.dumps(options_snapshot or {}, indent=2)}\n"
+            )
 
         context = (
             f"Ticker: {ticker}\n"
@@ -90,6 +152,7 @@ If no trade should be routed, explicitly state that no execution is recommended 
             "messages": [response],
             "execution_plan": plan_text,
             "proposed_trade": instruction,
+            "options_snapshot": options_snapshot,
         }
 
     return execution_node
