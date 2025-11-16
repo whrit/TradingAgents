@@ -36,6 +36,7 @@ from tradingagents.agents.utils.agent_utils import (
     get_insider_transactions,
     get_global_news
 )
+from tradingagents.agents.utils.alternative_data_tools import fetch_alternative_data
 
 from .conditional_logic import ConditionalLogic
 from .setup import GraphSetup
@@ -51,7 +52,7 @@ class TradingAgentsGraph:
 
     def __init__(
         self,
-        selected_analysts=["market", "social", "news", "fundamentals"],
+        selected_analysts=["macro", "market", "social", "news", "fundamentals", "alternative"],
         debug=False,
         config: Dict[str, Any] = None,
     ):
@@ -127,6 +128,12 @@ class TradingAgentsGraph:
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:
         """Create tool nodes for different data sources using abstract methods."""
         return {
+            "macro": ToolNode(
+                [
+                    get_global_news,
+                    get_news,
+                ]
+            ),
             "market": ToolNode(
                 [
                     # Core stock data tools
@@ -157,6 +164,12 @@ class TradingAgentsGraph:
                     get_balance_sheet,
                     get_cashflow,
                     get_income_statement,
+                ]
+            ),
+            "alternative": ToolNode(
+                [
+                    fetch_alternative_data,
+                    get_news,
                 ]
             ),
         }
@@ -195,7 +208,11 @@ class TradingAgentsGraph:
 
         # Return decision and processed signal
         decision = self.process_signal(final_state["final_trade_decision"])
-        execution = self._maybe_execute_trade(self.ticker, decision)
+        instruction = final_state.get("proposed_trade")
+        if not instruction:
+            instruction = self._build_trade_instruction(self.ticker, decision)
+            final_state["proposed_trade"] = instruction
+        execution = self._maybe_execute_trade(instruction)
         if execution:
             final_state["broker_execution"] = execution
 
@@ -210,6 +227,8 @@ class TradingAgentsGraph:
             "sentiment_report": final_state["sentiment_report"],
             "news_report": final_state["news_report"],
             "fundamentals_report": final_state["fundamentals_report"],
+            "macro_report": final_state.get("macro_report"),
+            "alternative_data_report": final_state.get("alternative_data_report"),
             "investment_debate_state": {
                 "bull_history": final_state["investment_debate_state"]["bull_history"],
                 "bear_history": final_state["investment_debate_state"]["bear_history"],
@@ -222,6 +241,7 @@ class TradingAgentsGraph:
                 ],
             },
             "trader_investment_decision": final_state["trader_investment_plan"],
+            "risk_quant_report": final_state.get("risk_quant_report"),
             "risk_debate_state": {
                 "risky_history": final_state["risk_debate_state"]["risky_history"],
                 "safe_history": final_state["risk_debate_state"]["safe_history"],
@@ -231,6 +251,9 @@ class TradingAgentsGraph:
             },
             "investment_plan": final_state["investment_plan"],
             "final_trade_decision": final_state["final_trade_decision"],
+            "execution_plan": final_state.get("execution_plan"),
+            "compliance_report": final_state.get("compliance_report"),
+            "compliance_status": final_state.get("compliance_status"),
         }
 
         # Save to file
@@ -265,47 +288,48 @@ class TradingAgentsGraph:
         """Process a signal to extract the core decision."""
         return self.signal_processor.process_signal(full_signal)
 
-    def _maybe_execute_trade(self, symbol: str, decision: Optional[str]):
-        """Execute the final trade decision if automation is enabled."""
-        if not self.config.get("auto_execute_trades"):
-            return None
-
+    def _build_trade_instruction(self, symbol: str, decision: Optional[str]):
         normalized = (decision or "").strip().upper()
         if normalized not in {"BUY", "SELL"}:
             return None
 
-        action = "buy" if normalized == "BUY" else "sell"
-        quantity = self.config.get("default_trade_quantity", 1)
-        order_type = self.config.get("default_order_type", "market")
-        time_in_force = self.config.get("default_time_in_force", "day")
+        instruction = {
+            "symbol": symbol,
+            "action": "buy" if normalized == "BUY" else "sell",
+            "quantity": self.config.get("default_trade_quantity", 1),
+            "order_type": self.config.get("default_order_type", "market"),
+            "time_in_force": self.config.get("default_time_in_force", "day"),
+            "limit_price": self.config.get("default_limit_price"),
+        }
+        return instruction
+
+    def _maybe_execute_trade(self, instruction: Optional[Dict[str, Any]]):
+        """Execute the final trade decision if automation is enabled."""
+        if not instruction or not self.config.get("auto_execute_trades"):
+            return None
 
         try:
             result = route_to_broker(
                 "place_order",
-                symbol,
-                quantity,
-                action,
-                order_type=order_type,
-                time_in_force=time_in_force,
+                instruction["symbol"],
+                instruction["quantity"],
+                instruction["action"],
+                order_type=instruction.get("order_type", "market"),
+                time_in_force=instruction.get("time_in_force", "day"),
+                limit_price=instruction.get("limit_price"),
             )
-            self.last_execution_result = {
-                "symbol": symbol,
-                "decision": normalized,
-                "quantity": quantity,
-                "order_type": order_type,
-                "time_in_force": time_in_force,
-                "result": result,
-            }
-            logger.info("Executed %s decision for %s: %s", normalized, symbol, result)
-        except Exception as exc:  # noqa: BLE001 - log unexpected broker errors
-            logger.exception("Failed to execute %s order for %s", normalized, symbol)
-            self.last_execution_result = {
-                "symbol": symbol,
-                "decision": normalized,
-                "quantity": quantity,
-                "order_type": order_type,
-                "time_in_force": time_in_force,
-                "error": str(exc),
-            }
+            self.last_execution_result = {**instruction, "result": result}
+            logger.info(
+                "Executed %s decision for %s",
+                instruction["action"],
+                instruction["symbol"],
+            )
+        except Exception as exc:  # pragma: no cover
+            logger.exception(
+                "Failed to execute %s order for %s",
+                instruction["action"],
+                instruction["symbol"],
+            )
+            self.last_execution_result = {**instruction, "error": str(exc)}
 
         return self.last_execution_result

@@ -39,6 +39,13 @@ class Propagator:
             "fundamentals_report": "",
             "sentiment_report": "",
             "news_report": "",
+            "macro_report": "",
+            "alternative_data_report": "",
+            "risk_quant_report": "",
+            "execution_plan": "",
+            "compliance_report": "",
+            "compliance_status": "PENDING",
+            "proposed_trade": None,
         }
 
     def get_graph_args(self) -> Dict[str, Any]:

@@ -91,6 +91,13 @@ Our framework decomposes complex trading tasks into specialized roles. This ensu
   <img src="assets/risk.png" width="70%" style="display: inline-block; margin: 0 2%;">
 </p>
 
+### Specialist Agents
+- **Macro Economist** distills policy moves, inflation prints, and yield-curve shifts into a top-down outlook that frames the rest of the discussion.
+- **Alternative Data Analyst** consumes satellite imagery proxies, app telemetry, and spend trackers to confirm or challenge official fundamentals.
+- **Risk Quant / Portfolio Hedger** computes historical VaR/ES metrics, proposes hedges, and highlights sizing guardrails before the qualitative debate begins.
+- **Execution Strategist** translates the final trade into an order-routing plan (slicing, venue mix, slippage expectations).
+- **Compliance Officer** applies restricted lists, size caps, and logging requirements before any order is allowed to hit the broker.
+
 ## Installation and CLI
 
 ### Installation
@@ -152,6 +159,8 @@ An interface will appear showing results as they load, letting you track the age
   <img src="assets/cli/cli_transaction.png" width="100%" style="display: inline-block; margin: 0 2%;">
 </p>
 
+Once the Execution Strategist and Compliance Officer finish their reports, the CLI now summarizes the proposed trade and asks you to approve or deny it. Approving routes the order through the configured broker (using the default quantity/order-type settings); denying simply ends the run without touching your account.
+
 ## TradingAgents Package
 
 ### Implementation Details
@@ -197,8 +206,12 @@ config["data_vendors"] = {
 
 # Optional: switch embeddings to Voyage AI (requires VOYAGE_API_KEY)
 config["embedding_provider"] = "voyage"
-config["embedding_model"] = "voyage-3.5"
-config["embedding_output_dimension"] = 512  # Must be supported by the selected Voyage model
+config["embedding_model"] = "voyage-finance-2"
+config["embedding_output_dimension"] = 1024  # Must be supported by the selected Voyage model
+
+# Compliance guardrails
+config["restricted_tickers"] = ["TSLA"]
+config["max_position_size"] = 500
 
 # Initialize with custom config
 ta = TradingAgentsGraph(debug=True, config=config)

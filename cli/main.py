@@ -26,6 +26,7 @@ from rich.rule import Rule
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.brokers.interface import route_to_broker
 from cli.models import AnalystType
 from cli.utils import *
 
@@ -47,32 +48,42 @@ class MessageBuffer:
         self.final_report = None  # Store the complete final report
         self.agent_status = {
             # Analyst Team
+            "Macro Economist": "pending",
             "Market Analyst": "pending",
             "Social Analyst": "pending",
             "News Analyst": "pending",
             "Fundamentals Analyst": "pending",
+            "Alternative Data Analyst": "pending",
             # Research Team
             "Bull Researcher": "pending",
             "Bear Researcher": "pending",
             "Research Manager": "pending",
             # Trading Team
             "Trader": "pending",
+            "Risk Quant Analyst": "pending",
             # Risk Management Team
             "Risky Analyst": "pending",
             "Neutral Analyst": "pending",
             "Safe Analyst": "pending",
             # Portfolio Management Team
             "Portfolio Manager": "pending",
+            "Execution Strategist": "pending",
+            "Compliance Officer": "pending",
         }
         self.current_agent = None
         self.report_sections = {
+            "macro_report": None,
             "market_report": None,
             "sentiment_report": None,
             "news_report": None,
             "fundamentals_report": None,
+            "alternative_data_report": None,
             "investment_plan": None,
             "trader_investment_plan": None,
+            "risk_quant_report": None,
             "final_trade_decision": None,
+            "execution_plan": None,
+            "compliance_report": None,
         }
 
     def add_message(self, message_type, content):
@@ -107,13 +118,18 @@ class MessageBuffer:
         if latest_section and latest_content:
             # Format the current section for display
             section_titles = {
+                "macro_report": "Macro Outlook",
                 "market_report": "Market Analysis",
                 "sentiment_report": "Social Sentiment",
                 "news_report": "News Analysis",
                 "fundamentals_report": "Fundamentals Analysis",
+                "alternative_data_report": "Alternative Data",
                 "investment_plan": "Research Team Decision",
                 "trader_investment_plan": "Trading Team Plan",
+                "risk_quant_report": "Risk Quant Summary",
                 "final_trade_decision": "Portfolio Management Decision",
+                "execution_plan": "Execution Strategy",
+                "compliance_report": "Compliance Summary",
             }
             self.current_report = (
                 f"### {section_titles[latest_section]}\n{latest_content}"
@@ -126,16 +142,20 @@ class MessageBuffer:
         report_parts = []
 
         # Analyst Team Reports
-        if any(
-            self.report_sections[section]
-            for section in [
-                "market_report",
-                "sentiment_report",
-                "news_report",
-                "fundamentals_report",
-            ]
-        ):
+        analyst_sections = [
+            "macro_report",
+            "market_report",
+            "sentiment_report",
+            "news_report",
+            "fundamentals_report",
+            "alternative_data_report",
+        ]
+        if any(self.report_sections[section] for section in analyst_sections):
             report_parts.append("## Analyst Team Reports")
+            if self.report_sections["macro_report"]:
+                report_parts.append(
+                    f"### Macro Economist\n{self.report_sections['macro_report']}"
+                )
             if self.report_sections["market_report"]:
                 report_parts.append(
                     f"### Market Analysis\n{self.report_sections['market_report']}"
@@ -152,6 +172,10 @@ class MessageBuffer:
                 report_parts.append(
                     f"### Fundamentals Analysis\n{self.report_sections['fundamentals_report']}"
                 )
+            if self.report_sections["alternative_data_report"]:
+                report_parts.append(
+                    f"### Alternative Data\n{self.report_sections['alternative_data_report']}"
+                )
 
         # Research Team Reports
         if self.report_sections["investment_plan"]:
@@ -162,11 +186,20 @@ class MessageBuffer:
         if self.report_sections["trader_investment_plan"]:
             report_parts.append("## Trading Team Plan")
             report_parts.append(f"{self.report_sections['trader_investment_plan']}")
+        if self.report_sections["risk_quant_report"]:
+            report_parts.append("## Risk Quant Summary")
+            report_parts.append(f"{self.report_sections['risk_quant_report']}")
 
         # Portfolio Management Decision
         if self.report_sections["final_trade_decision"]:
             report_parts.append("## Portfolio Management Decision")
             report_parts.append(f"{self.report_sections['final_trade_decision']}")
+        if self.report_sections["execution_plan"]:
+            report_parts.append("## Execution Strategy")
+            report_parts.append(f"{self.report_sections['execution_plan']}")
+        if self.report_sections["compliance_report"]:
+            report_parts.append("## Compliance Summary")
+            report_parts.append(f"{self.report_sections['compliance_report']}")
 
         self.final_report = "\n\n".join(report_parts) if report_parts else None
 
@@ -527,7 +560,16 @@ def display_complete_report(final_state):
     # I. Analyst Team Reports
     analyst_reports = []
 
-    # Market Analyst Report
+    if final_state.get("macro_report"):
+        analyst_reports.append(
+            Panel(
+                Markdown(final_state["macro_report"]),
+                title="Macro Economist",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+
     if final_state.get("market_report"):
         analyst_reports.append(
             Panel(
@@ -560,12 +602,20 @@ def display_complete_report(final_state):
             )
         )
 
-    # Fundamentals Analyst Report
     if final_state.get("fundamentals_report"):
         analyst_reports.append(
             Panel(
                 Markdown(final_state["fundamentals_report"]),
                 title="Fundamentals Analyst",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+    if final_state.get("alternative_data_report"):
+        analyst_reports.append(
+            Panel(
+                Markdown(final_state["alternative_data_report"]),
+                title="Alternative Data Analyst",
                 border_style="blue",
                 padding=(1, 2),
             )
@@ -630,16 +680,30 @@ def display_complete_report(final_state):
             )
 
     # III. Trading Team Reports
+    trading_panels = []
     if final_state.get("trader_investment_plan"):
+        trading_panels.append(
+            Panel(
+                Markdown(final_state["trader_investment_plan"]),
+                title="Trader",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+    if final_state.get("risk_quant_report"):
+        trading_panels.append(
+            Panel(
+                Markdown(final_state["risk_quant_report"]),
+                title="Risk Quant Analyst",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+    if trading_panels:
         console.print(
             Panel(
-                Panel(
-                    Markdown(final_state["trader_investment_plan"]),
-                    title="Trader",
-                    border_style="blue",
-                    padding=(1, 2),
-                ),
-                title="III. Trading Team Plan",
+                Columns(trading_panels, equal=True, expand=True),
+                title="III. Trading & Hedging Plan",
                 border_style="yellow",
                 padding=(1, 2),
             )
@@ -708,6 +772,86 @@ def display_complete_report(final_state):
                     padding=(1, 2),
                 )
             )
+
+    # VI. Execution & Compliance
+    exec_panels = []
+    if final_state.get("execution_plan"):
+        exec_panels.append(
+            Panel(
+                Markdown(final_state["execution_plan"]),
+                title="Execution Strategist",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+    if final_state.get("compliance_report"):
+        exec_panels.append(
+            Panel(
+                Markdown(final_state["compliance_report"]),
+                title="Compliance Officer",
+                border_style="blue",
+                padding=(1, 2),
+            )
+        )
+    if exec_panels:
+        console.print(
+            Panel(
+                Columns(exec_panels, equal=True, expand=True),
+                title="VI. Execution & Compliance",
+                border_style="white",
+                padding=(1, 2),
+            )
+        )
+
+
+def prompt_trade_execution(final_state, config):
+    trade = final_state.get("proposed_trade")
+    if not trade:
+        console.print("[yellow]No executable trade was proposed.[/yellow]")
+        return
+
+    if final_state.get("compliance_status") == "BLOCKED":
+        console.print(
+            "[red]Compliance blocked the trade. Manual execution disabled.[/red]"
+        )
+        return
+
+    if config.get("auto_execute_trades") and final_state.get("broker_execution"):
+        console.print("[green]Trade already auto-executed per configuration.[/green]")
+        return
+
+    console.print(
+        Panel(
+            f"Trader recommends to [bold]{trade['action'].upper()}[/bold] "
+            f"{trade['quantity']} shares of {trade['symbol']} using "
+            f"{trade.get('order_type','market').upper()} / "
+            f"{trade.get('time_in_force','day').upper()}.\n\n"
+            f"Execution notes:\n{final_state.get('execution_plan','(none)')}",
+            title="Proposed Trade",
+            border_style="yellow",
+        )
+    )
+
+    if typer.confirm("Do you approve and want to route this trade?", default=False):
+        try:
+            result = route_to_broker(
+                "place_order",
+                trade["symbol"],
+                trade["quantity"],
+                trade["action"],
+                order_type=trade.get("order_type", "market"),
+                time_in_force=trade.get("time_in_force", "day"),
+                limit_price=trade.get("limit_price"),
+            )
+            console.print(
+                f"[green]Trade executed: {result}[/green]"
+            )
+        except Exception as exc:  # pragma: no cover
+            console.print(
+                f"[red]Failed to execute trade: {exc}[/red]"
+            )
+    else:
+        console.print("[yellow]Trade skipped at user request.[/yellow]")
 
 
 def update_research_team_status(status):
@@ -829,8 +973,12 @@ def run_analysis():
         message_buffer.final_report = None
 
         # Update agent status to in_progress for the first analyst
-        first_analyst = f"{selections['analysts'][0].value.capitalize()} Analyst"
-        message_buffer.update_agent_status(first_analyst, "in_progress")
+        analyst_display = {value: label for label, value in ANALYST_ORDER}
+        first_analyst_value = selections["analysts"][0]
+        first_display = analyst_display.get(
+            first_analyst_value, f"{first_analyst_value.value.capitalize()} Analyst"
+        )
+        message_buffer.update_agent_status(first_display, "in_progress")
         update_display(layout)
 
         # Create spinner text
@@ -876,6 +1024,16 @@ def run_analysis():
 
                 # Update reports and agent status based on chunk content
                 # Analyst Team Reports
+                if "macro_report" in chunk and chunk["macro_report"]:
+                    message_buffer.update_report_section(
+                        "macro_report", chunk["macro_report"]
+                    )
+                    message_buffer.update_agent_status("Macro Economist", "completed")
+                    if any(a.value == "market" for a in selections["analysts"]):
+                        message_buffer.update_agent_status(
+                            "Market Analyst", "in_progress"
+                        )
+
                 if "market_report" in chunk and chunk["market_report"]:
                     message_buffer.update_report_section(
                         "market_report", chunk["market_report"]
@@ -917,6 +1075,18 @@ def run_analysis():
                         "Fundamentals Analyst", "completed"
                     )
                     # Set all research team members to in_progress
+                    update_research_team_status("in_progress")
+
+                if (
+                    "alternative_data_report" in chunk
+                    and chunk["alternative_data_report"]
+                ):
+                    message_buffer.update_report_section(
+                        "alternative_data_report", chunk["alternative_data_report"]
+                    )
+                    message_buffer.update_agent_status(
+                        "Alternative Data Analyst", "completed"
+                    )
                     update_research_team_status("in_progress")
 
                 # Research Team - Handle Investment Debate State
@@ -988,6 +1158,13 @@ def run_analysis():
                         "trader_investment_plan", chunk["trader_investment_plan"]
                     )
                     # Set first risk analyst to in_progress
+                    message_buffer.update_agent_status("Risk Quant Analyst", "in_progress")
+
+                if "risk_quant_report" in chunk and chunk["risk_quant_report"]:
+                    message_buffer.update_report_section(
+                        "risk_quant_report", chunk["risk_quant_report"]
+                    )
+                    message_buffer.update_agent_status("Risk Quant Analyst", "completed")
                     message_buffer.update_agent_status("Risky Analyst", "in_progress")
 
                 # Risk Management Team - Handle Risk Debate State
@@ -1071,6 +1248,28 @@ def run_analysis():
                         message_buffer.update_agent_status(
                             "Portfolio Manager", "completed"
                         )
+                        message_buffer.update_agent_status(
+                            "Execution Strategist", "in_progress"
+                        )
+
+                if "execution_plan" in chunk and chunk["execution_plan"]:
+                    message_buffer.update_report_section(
+                        "execution_plan", chunk["execution_plan"]
+                    )
+                    message_buffer.update_agent_status(
+                        "Execution Strategist", "completed"
+                    )
+                    message_buffer.update_agent_status(
+                        "Compliance Officer", "in_progress"
+                    )
+
+                if "compliance_report" in chunk and chunk["compliance_report"]:
+                    message_buffer.update_report_section(
+                        "compliance_report", chunk["compliance_report"]
+                    )
+                    message_buffer.update_agent_status(
+                        "Compliance Officer", "completed"
+                    )
 
                 # Update the display
                 update_display(layout)
@@ -1096,6 +1295,7 @@ def run_analysis():
 
         # Display the complete final report
         display_complete_report(final_state)
+        prompt_trade_execution(final_state, config)
 
         update_display(layout)
 

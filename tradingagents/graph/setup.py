@@ -11,6 +11,25 @@ from tradingagents.agents.utils.agent_states import AgentState
 from .conditional_logic import ConditionalLogic
 
 
+ANALYST_FACTORIES = {
+    "macro": create_macro_economist,
+    "market": create_market_analyst,
+    "social": create_social_media_analyst,
+    "news": create_news_analyst,
+    "fundamentals": create_fundamentals_analyst,
+    "alternative": create_alternative_data_analyst,
+}
+
+ANALYST_LABELS = {
+    "macro": "Macro Economist",
+    "market": "Market Analyst",
+    "social": "Social Analyst",
+    "news": "News Analyst",
+    "fundamentals": "Fundamentals Analyst",
+    "alternative": "Alternative Data Analyst",
+}
+
+
 class GraphSetup:
     """Handles the setup and configuration of the agent graph."""
 
@@ -38,52 +57,33 @@ class GraphSetup:
         self.conditional_logic = conditional_logic
 
     def setup_graph(
-        self, selected_analysts=["market", "social", "news", "fundamentals"]
+        self, selected_analysts=["macro", "market", "social", "news", "fundamentals", "alternative"]
     ):
         """Set up and compile the agent workflow graph.
 
         Args:
             selected_analysts (list): List of analyst types to include. Options are:
+                - "macro": Macro economist
                 - "market": Market analyst
                 - "social": Social media analyst
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
+                - "alternative": Alternative data analyst
         """
         if len(selected_analysts) == 0:
             raise ValueError("Trading Agents Graph Setup Error: no analysts selected!")
 
         # Create analyst nodes
-        analyst_nodes = {}
-        delete_nodes = {}
-        tool_nodes = {}
-
-        if "market" in selected_analysts:
-            analyst_nodes["market"] = create_market_analyst(
-                self.quick_thinking_llm
-            )
-            delete_nodes["market"] = create_msg_delete()
-            tool_nodes["market"] = self.tool_nodes["market"]
-
-        if "social" in selected_analysts:
-            analyst_nodes["social"] = create_social_media_analyst(
-                self.quick_thinking_llm
-            )
-            delete_nodes["social"] = create_msg_delete()
-            tool_nodes["social"] = self.tool_nodes["social"]
-
-        if "news" in selected_analysts:
-            analyst_nodes["news"] = create_news_analyst(
-                self.quick_thinking_llm
-            )
-            delete_nodes["news"] = create_msg_delete()
-            tool_nodes["news"] = self.tool_nodes["news"]
-
-        if "fundamentals" in selected_analysts:
-            analyst_nodes["fundamentals"] = create_fundamentals_analyst(
-                self.quick_thinking_llm
-            )
-            delete_nodes["fundamentals"] = create_msg_delete()
-            tool_nodes["fundamentals"] = self.tool_nodes["fundamentals"]
+        analyst_nodes: Dict[str, Dict[str, Any]] = {}
+        for analyst_key in selected_analysts:
+            if analyst_key not in ANALYST_FACTORIES:
+                raise ValueError(f"Unknown analyst type '{analyst_key}'")
+            analyst_nodes[analyst_key] = {
+                "label": ANALYST_LABELS[analyst_key],
+                "node": ANALYST_FACTORIES[analyst_key](self.quick_thinking_llm),
+                "clear": create_msg_delete(),
+                "tools": self.tool_nodes.get(analyst_key),
+            }
 
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(
@@ -96,6 +96,7 @@ class GraphSetup:
             self.deep_thinking_llm, self.invest_judge_memory
         )
         trader_node = create_trader(self.quick_thinking_llm, self.trader_memory)
+        risk_quant_node = create_risk_quant(self.quick_thinking_llm)
 
         # Create risk analysis nodes
         risky_analyst = create_risky_debator(self.quick_thinking_llm)
@@ -104,51 +105,59 @@ class GraphSetup:
         risk_manager_node = create_risk_manager(
             self.deep_thinking_llm, self.risk_manager_memory
         )
+        execution_strategist_node = create_execution_strategist(self.quick_thinking_llm)
+        compliance_officer_node = create_compliance_officer(self.quick_thinking_llm)
 
         # Create workflow
         workflow = StateGraph(AgentState)
 
         # Add analyst nodes to the graph
-        for analyst_type, node in analyst_nodes.items():
-            workflow.add_node(f"{analyst_type.capitalize()} Analyst", node)
-            workflow.add_node(
-                f"Msg Clear {analyst_type.capitalize()}", delete_nodes[analyst_type]
-            )
-            workflow.add_node(f"tools_{analyst_type}", tool_nodes[analyst_type])
+        for analyst_type, meta in analyst_nodes.items():
+            label = meta["label"]
+            workflow.add_node(label, meta["node"])
+            workflow.add_node(f"Msg Clear {label}", meta["clear"])
+            if meta["tools"]:
+                workflow.add_node(f"tools_{analyst_type}", meta["tools"])
 
         # Add other nodes
         workflow.add_node("Bull Researcher", bull_researcher_node)
         workflow.add_node("Bear Researcher", bear_researcher_node)
         workflow.add_node("Research Manager", research_manager_node)
         workflow.add_node("Trader", trader_node)
+        workflow.add_node("Risk Quant Analyst", risk_quant_node)
         workflow.add_node("Risky Analyst", risky_analyst)
         workflow.add_node("Neutral Analyst", neutral_analyst)
         workflow.add_node("Safe Analyst", safe_analyst)
         workflow.add_node("Risk Judge", risk_manager_node)
+        workflow.add_node("Execution Strategist", execution_strategist_node)
+        workflow.add_node("Compliance Officer", compliance_officer_node)
 
         # Define edges
         # Start with the first analyst
-        first_analyst = selected_analysts[0]
-        workflow.add_edge(START, f"{first_analyst.capitalize()} Analyst")
+        first_label = analyst_nodes[selected_analysts[0]]["label"]
+        workflow.add_edge(START, first_label)
 
         # Connect analysts in sequence
         for i, analyst_type in enumerate(selected_analysts):
-            current_analyst = f"{analyst_type.capitalize()} Analyst"
+            label = analyst_nodes[analyst_type]["label"]
             current_tools = f"tools_{analyst_type}"
-            current_clear = f"Msg Clear {analyst_type.capitalize()}"
+            current_clear = f"Msg Clear {label}"
 
-            # Add conditional edges for current analyst
+            should_continue = getattr(
+                self.conditional_logic, f"should_continue_{analyst_type}"
+            )
             workflow.add_conditional_edges(
-                current_analyst,
-                getattr(self.conditional_logic, f"should_continue_{analyst_type}"),
+                label,
+                should_continue,
                 [current_tools, current_clear],
             )
-            workflow.add_edge(current_tools, current_analyst)
+            if analyst_nodes[analyst_type]["tools"]:
+                workflow.add_edge(current_tools, label)
 
             # Connect to next analyst or to Bull Researcher if this is the last analyst
             if i < len(selected_analysts) - 1:
-                next_analyst = f"{selected_analysts[i+1].capitalize()} Analyst"
-                workflow.add_edge(current_clear, next_analyst)
+                next_label = analyst_nodes[selected_analysts[i + 1]]["label"]
+                workflow.add_edge(current_clear, next_label)
             else:
                 workflow.add_edge(current_clear, "Bull Researcher")
 
@@ -170,7 +179,8 @@ class GraphSetup:
             },
         )
         workflow.add_edge("Research Manager", "Trader")
-        workflow.add_edge("Trader", "Risky Analyst")
+        workflow.add_edge("Trader", "Risk Quant Analyst")
+        workflow.add_edge("Risk Quant Analyst", "Risky Analyst")
         workflow.add_conditional_edges(
             "Risky Analyst",
             self.conditional_logic.should_continue_risk_analysis,
@@ -196,7 +206,9 @@ class GraphSetup:
             },
         )
 
-        workflow.add_edge("Risk Judge", END)
+        workflow.add_edge("Risk Judge", "Execution Strategist")
+        workflow.add_edge("Execution Strategist", "Compliance Officer")
+        workflow.add_edge("Compliance Officer", END)
 
         # Compile and return
         return workflow.compile()

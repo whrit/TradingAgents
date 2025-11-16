@@ -19,6 +19,14 @@ class ConditionalLogic:
             return "tools_market"
         return "Msg Clear Market"
 
+    def should_continue_macro(self, state: AgentState):
+        """Determine if macro economic analysis should continue."""
+        messages = state["messages"]
+        last_message = messages[-1]
+        if last_message.tool_calls:
+            return "tools_macro"
+        return "Msg Clear Macro Economist"
+
     def should_continue_social(self, state: AgentState):
         """Determine if social media analysis should continue."""
         messages = state["messages"]
@@ -42,6 +50,14 @@ class ConditionalLogic:
         if last_message.tool_calls:
             return "tools_fundamentals"
         return "Msg Clear Fundamentals"
+
+    def should_continue_alternative(self, state: AgentState):
+        """Determine if alternative data analysis should continue."""
+        messages = state["messages"]
+        last_message = messages[-1]
+        if last_message.tool_calls:
+            return "tools_alternative"
+        return "Msg Clear Alternative Data Analyst"
 
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue."""

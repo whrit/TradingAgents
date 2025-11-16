@@ -4,7 +4,9 @@ from pydantic import BaseModel
 
 
 class AnalystType(str, Enum):
+    MACRO = "macro"
     MARKET = "market"
     SOCIAL = "social"
     NEWS = "news"
     FUNDAMENTALS = "fundamentals"
+    ALTERNATIVE = "alternative"
