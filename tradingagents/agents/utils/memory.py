@@ -2,22 +2,47 @@ import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
 
+try:
+    import voyageai
+except ImportError:  # pragma: no cover - voyage is optional for some environments
+    voyageai = None
+
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
-        if config["backend_url"] == "http://localhost:11434/v1":
-            self.embedding = "nomic-embed-text"
+        self.embedding_provider = config.get("embedding_provider", "openai")
+        self.embedding_model = config.get("embedding_model")
+        self.client = None
+        self.voyage_client = None
+
+        if self.embedding_provider == "voyage":
+            if voyageai is None:
+                raise ImportError(
+                    "voyageai package is required when embedding_provider='voyage'"
+                )
+            self.embedding_model = self.embedding_model or "voyage-3.5"
+            self.voyage_client = voyageai.Client()
         else:
-            self.embedding = "text-embedding-3-small"
-        self.client = OpenAI(base_url=config["backend_url"])
+            # Default to OpenAI embeddings
+            if config["backend_url"] == "http://localhost:11434/v1":
+                self.embedding_model = self.embedding_model or "nomic-embed-text"
+            else:
+                self.embedding_model = self.embedding_model or "text-embedding-3-small"
+            self.client = OpenAI(base_url=config["backend_url"])
+
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
 
     def get_embedding(self, text):
-        """Get OpenAI embedding for a text"""
-        
+        """Get an embedding for a text via configured provider."""
+        if self.embedding_provider == "voyage":
+            response = self.voyage_client.embed(
+                [text], model=self.embedding_model, input_type=None
+            )
+            return response.embeddings[0]
+
         response = self.client.embeddings.create(
-            model=self.embedding, input=text
+            model=self.embedding_model, input=text
         )
         return response.data[0].embedding
 

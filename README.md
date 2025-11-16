@@ -114,11 +114,12 @@ pip install -r requirements.txt
 
 ### Required APIs
 
-You will need the OpenAI API for all the agents, and [Alpha Vantage API](https://www.alphavantage.co/support/#api-key) for fundamental and news data (default configuration).
+You will need the OpenAI API for all the agents, and [Alpha Vantage API](https://www.alphavantage.co/support/#api-key) for fundamental and news data (default configuration). Voyage AI is optional but enables higher quality or private embeddings.
 
 ```bash
 export OPENAI_API_KEY=$YOUR_OPENAI_API_KEY
 export ALPHA_VANTAGE_API_KEY=$YOUR_ALPHA_VANTAGE_API_KEY
+export VOYAGE_API_KEY=$YOUR_VOYAGE_API_KEY
 ```
 
 Alternatively, you can create a `.env` file in the project root with your API keys (see `.env.example` for reference):
@@ -193,6 +194,10 @@ config["data_vendors"] = {
     "fundamental_data": "alpha_vantage",     # Options: openai, alpha_vantage, local
     "news_data": "alpha_vantage",            # Options: openai, alpha_vantage, google, local
 }
+
+# Optional: switch embeddings to Voyage AI (requires VOYAGE_API_KEY)
+config["embedding_provider"] = "voyage"
+config["embedding_model"] = "voyage-3.5"
 
 # Initialize with custom config
 ta = TradingAgentsGraph(debug=True, config=config)

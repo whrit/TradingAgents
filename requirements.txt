@@ -29,8 +29,10 @@ langchain-google-genai
 alpaca-py
 python-dotenv
 urllib3
+voyageai
 
 # Testing (for Alpaca module tests)
 pytest
 pytest-cov
 pytest-mock
+voyageai
