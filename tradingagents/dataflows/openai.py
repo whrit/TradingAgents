@@ -2,6 +2,30 @@ from openai import OpenAI
 from .config import get_config
 
 
+def _extract_response_text(response) -> str:
+    """Extract textual output from OpenAI Responses API result."""
+    output_text = getattr(response, "output_text", None)
+    if output_text:
+        return output_text
+
+    outputs = getattr(response, "output", [])
+    for item in reversed(outputs):
+        content = getattr(item, "content", None)
+        if not content:
+            continue
+        text_chunks = []
+        for chunk in content:
+            text_value = getattr(chunk, "text", None)
+            if isinstance(text_value, str):
+                text_chunks.append(text_value)
+            elif text_value is not None and hasattr(text_value, "value"):
+                text_chunks.append(text_value.value)
+        if text_chunks:
+            return "\n".join(text_chunks)
+
+    raise AttributeError("OpenAI response did not contain textual output")
+
+
 def get_stock_news_openai(query, start_date, end_date):
     config = get_config()
     client = OpenAI(base_url=config["backend_url"])
@@ -34,7 +58,7 @@ def get_stock_news_openai(query, start_date, end_date):
         store=True,
     )
 
-    return response.output[1].content[0].text
+    return _extract_response_text(response)
 
 
 def get_global_news_openai(curr_date, look_back_days=7, limit=5):
@@ -69,7 +93,7 @@ def get_global_news_openai(curr_date, look_back_days=7, limit=5):
         store=True,
     )
 
-    return response.output[1].content[0].text
+    return _extract_response_text(response)
 
 
 def get_fundamentals_openai(ticker, curr_date):
@@ -104,4 +128,4 @@ def get_fundamentals_openai(ticker, curr_date):
         store=True,
     )
 
-    return response.output[1].content[0].text
+    return _extract_response_text(response)

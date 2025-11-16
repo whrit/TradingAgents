@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from .alpha_vantage_common import _make_api_request, format_datetime_for_api
 
 def get_news(ticker, start_date, end_date) -> dict[str, str] | str:
@@ -41,3 +43,20 @@ def get_insider_transactions(symbol: str) -> dict[str, str] | str:
     }
 
     return _make_api_request("INSIDER_TRANSACTIONS", params)
+
+
+def get_global_news(curr_date: str, look_back_days: int = 7, limit: int = 5) -> dict | str:
+    """Fetch macro/global news via Alpha Vantage's NEWS_SENTIMENT topics capability."""
+
+    end_dt = datetime.strptime(curr_date, "%Y-%m-%d") + timedelta(hours=23, minutes=59)
+    start_dt = end_dt - timedelta(days=look_back_days)
+
+    params = {
+        "topics": "financial_markets,economy,earnings",
+        "time_from": format_datetime_for_api(start_dt),
+        "time_to": format_datetime_for_api(end_dt),
+        "sort": "LATEST",
+        "limit": str(limit),
+    }
+
+    return _make_api_request("NEWS_SENTIMENT", params)

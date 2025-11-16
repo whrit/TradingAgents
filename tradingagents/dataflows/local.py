@@ -384,6 +384,10 @@ def get_reddit_global_news(
     before = curr_date_dt - relativedelta(days=look_back_days)
     before = before.strftime("%Y-%m-%d")
 
+    data_root = os.path.join(DATA_DIR, "reddit_data") if DATA_DIR else None
+    if not data_root or not os.path.isdir(data_root):
+        return f"No local reddit global_news dataset available at {data_root or 'unset DATA_DIR'}"
+
     posts = []
     # iterate from before to curr_date
     curr_iter_date = datetime.strptime(before, "%Y-%m-%d")
@@ -393,12 +397,17 @@ def get_reddit_global_news(
 
     while curr_iter_date <= curr_date_dt:
         curr_date_str = curr_iter_date.strftime("%Y-%m-%d")
-        fetch_result = fetch_top_from_category(
-            "global_news",
-            curr_date_str,
-            limit,
-            data_path=os.path.join(DATA_DIR, "reddit_data"),
-        )
+        try:
+            fetch_result = fetch_top_from_category(
+                "global_news",
+                curr_date_str,
+                limit,
+                data_path=data_root,
+            )
+        except FileNotFoundError:
+            pbar.close()
+            return f"No local reddit global_news dataset available at {data_root}"
+
         posts.extend(fetch_result)
         curr_iter_date += relativedelta(days=1)
         pbar.update(1)
