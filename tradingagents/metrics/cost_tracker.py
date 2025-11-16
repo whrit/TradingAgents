@@ -9,6 +9,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.outputs import ChatResult
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from pydantic import PrivateAttr
 
 
 class CostTracker:
@@ -123,9 +124,12 @@ class CostTracker:
 class CostTrackingMixin:
     """Mixin that records token usage from LangChain chat models."""
 
+    _cost_tracker: Optional[CostTracker] = PrivateAttr(default=None)
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._cost_tracker: Optional[CostTracker] = kwargs.pop("cost_tracker", None)
+        tracker = kwargs.pop("cost_tracker", None)
         super().__init__(*args, **kwargs)
+        self._cost_tracker = tracker
 
     def _generate(self, *args: Any, **kwargs: Any) -> ChatResult:  # type: ignore[override]
         result = super()._generate(*args, **kwargs)
