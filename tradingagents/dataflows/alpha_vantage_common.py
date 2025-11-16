@@ -39,6 +39,11 @@ class AlphaVantageRateLimitError(Exception):
     """Exception raised when Alpha Vantage API rate limit is exceeded."""
     pass
 
+
+class AlphaVantagePremiumError(Exception):
+    """Exception raised when an Alpha Vantage premium-only endpoint is requested."""
+    pass
+
 def _make_api_request(function_name: str, params: dict) -> dict | str:
     """Helper function to make API requests and handle responses.
     
@@ -74,8 +79,22 @@ def _make_api_request(function_name: str, params: dict) -> dict | str:
         # Check for rate limit error
         if "Information" in response_json:
             info_message = response_json["Information"]
-            if "rate limit" in info_message.lower() or "api key" in info_message.lower():
-                raise AlphaVantageRateLimitError(f"Alpha Vantage rate limit exceeded: {info_message}")
+            info_lower = info_message.lower()
+            if "premium" in info_lower or "subscribe" in info_lower:
+                raise AlphaVantagePremiumError(
+                    f"Alpha Vantage premium endpoint requested: {info_message}"
+                )
+            if (
+                "rate limit" in info_lower
+                or "call frequency" in info_lower
+                or "calls per minute" in info_lower
+                or "per minute" in info_lower
+                or "per day" in info_lower
+                or "api key" in info_lower
+            ):
+                raise AlphaVantageRateLimitError(
+                    f"Alpha Vantage rate limit exceeded: {info_message}"
+                )
     except json.JSONDecodeError:
         # Response is not JSON (likely CSV data), which is normal
         pass

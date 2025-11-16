@@ -104,3 +104,23 @@ def test_memory_voyage_invalid_dimension(monkeypatch):
                 "embedding_output_dimension": 512,
             },
         )
+
+
+def test_memory_truncates_long_text(monkeypatch):
+    monkeypatch.setattr(memory, "OpenAI", DummyOpenAI)
+
+    mem = FinancialSituationMemory(
+        "test-memory-truncate",
+        {
+            "backend_url": "https://api.openai.com/v1",
+            "embedding_max_tokens": 5,
+        },
+    )
+    mem._token_encoder = None  # force fallback path
+
+    long_text = "market commentary " * 50
+    mem.get_embedding(long_text)
+
+    _, captured_input = mem.client.embeddings.calls[0]
+    assert len(captured_input) <= 5 * 4
+    assert len(captured_input) < len(long_text)

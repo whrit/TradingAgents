@@ -223,7 +223,7 @@ print(decision)
 
 > The default configuration uses yfinance for stock price and technical data, and Alpha Vantage for fundamental and news data. For production use or if you encounter rate limits, consider upgrading to [Alpha Vantage Premium](https://www.alphavantage.co/premium/) for more stable and reliable data access. For offline experimentation, there's a local data vendor option that uses our **Tauric TradingDB**, a curated dataset for backtesting, though this is still in development. We're currently refining this dataset and plan to release it soon alongside our upcoming projects. Stay tuned!
 
-You can view the full list of configurations in `tradingagents/default_config.py`.
+You can view the full list of configurations in `tradingagents/default_config.py`. While the CLI is running it now renders a live operations dashboard showing the running cost tracker, broker positions/PnL (when credentials are available), and a real-time market snapshot for the selected ticker so you can monitor spend and exposure as each agent reports in.
 
 ### Tracking LLM Costs Per Run
 

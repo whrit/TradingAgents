@@ -27,14 +27,15 @@ DEFAULT_CONFIG = {
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
     # Embedding defaults
-    "embedding_provider": "openai",
-    "embedding_model": "text-embedding-3-small",
+    "embedding_provider": "voyage",
+    "embedding_model": "voyage-finance-2",
     "embedding_output_dimension": None,
+    "embedding_max_tokens": int(os.getenv("EMBEDDING_MAX_TOKENS", "7000")),
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
     "data_vendors": {
-        "core_stock_apis": "yfinance",       # Options: yfinance, alpha_vantage, local
-        "technical_indicators": "yfinance",  # Options: yfinance, alpha_vantage, local
+        "core_stock_apis": "alpha_vantage",       # Options: yfinance, alpha_vantage, local
+        "technical_indicators": "alpha_vantage",  # Options: yfinance, alpha_vantage, local
         "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
         "news_data": "alpha_vantage",        # Options: openai, alpha_vantage, google, local
     },

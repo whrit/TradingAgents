@@ -3,6 +3,11 @@ from chromadb.config import Settings
 from openai import OpenAI
 
 try:
+    import tiktoken
+except ImportError:  # pragma: no cover - optional dependency
+    tiktoken = None
+
+try:
     import voyageai
 except ImportError:  # pragma: no cover - voyage is optional for some environments
     voyageai = None
@@ -24,6 +29,8 @@ class FinancialSituationMemory:
         self.embedding_model = config.get("embedding_model")
         self.client = None
         self.voyage_client = None
+        self.max_embedding_tokens = config.get("embedding_max_tokens", 7000)
+        self._token_encoder = None
 
         if self.embedding_provider == "voyage":
             if voyageai is None:
@@ -48,6 +55,11 @@ class FinancialSituationMemory:
             self.voyage_context_length = spec["context"]
             self.embedding_output_dimension = requested_dim
             self.voyage_client = voyageai.Client()
+            try:
+                if tiktoken:
+                    self._token_encoder = tiktoken.get_encoding("cl100k_base")
+            except Exception:  # pragma: no cover - encoder fallback
+                self._token_encoder = None
         else:
             # Default to OpenAI embeddings
             if config["backend_url"] == "http://localhost:11434/v1":
@@ -55,15 +67,21 @@ class FinancialSituationMemory:
             else:
                 self.embedding_model = self.embedding_model or "text-embedding-3-small"
             self.client = OpenAI(base_url=config["backend_url"])
+            try:  # best-effort token encoder matching embedding model
+                if tiktoken:
+                    self._token_encoder = tiktoken.encoding_for_model(self.embedding_model)
+            except Exception:  # pragma: no cover - encoder fallback
+                self._token_encoder = None
 
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.create_collection(name=name)
 
     def get_embedding(self, text):
         """Get an embedding for a text via configured provider."""
+        prepared = self._prepare_text_for_embedding(text)
         if self.embedding_provider == "voyage":
             response = self.voyage_client.embed(
-                [text],
+                [prepared],
                 model=self.embedding_model,
                 input_type=None,
                 output_dimension=self.embedding_output_dimension,
@@ -71,7 +89,7 @@ class FinancialSituationMemory:
             return response.embeddings[0]
 
         response = self.client.embeddings.create(
-            model=self.embedding_model, input=text
+            model=self.embedding_model, input=prepared
         )
         return response.data[0].embedding
 
@@ -119,6 +137,27 @@ class FinancialSituationMemory:
             )
 
         return matched_results
+
+    def _prepare_text_for_embedding(self, text: str) -> str:
+        """Truncate oversized prompts so embedding calls stay within limits."""
+        if not text:
+            return text
+
+        limit = self.max_embedding_tokens or 0
+        if limit <= 0:
+            return text
+
+        if self._token_encoder:
+            tokens = self._token_encoder.encode(text)
+            if len(tokens) <= limit:
+                return text
+            return self._token_encoder.decode(tokens[:limit])
+
+        # Fallback: approximate by character length (4 chars ≈ 1 token)
+        max_chars = limit * 4
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars]
 
 
 if __name__ == "__main__":

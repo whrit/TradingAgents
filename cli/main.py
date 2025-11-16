@@ -3,7 +3,7 @@ import datetime
 import typer
 from pathlib import Path
 from functools import wraps
-from rich.console import Console
+from rich.console import Console, Group
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -23,6 +23,7 @@ from rich.tree import Tree
 from rich import box
 from rich.align import Align
 from rich.rule import Rule
+import yfinance as yf
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
@@ -85,6 +86,17 @@ class MessageBuffer:
             "execution_plan": None,
             "compliance_report": None,
         }
+        self.ticker = None
+        self.live_metrics = {
+            "costs": None,
+            "positions": [],
+            "positions_error": None,
+            "pnl": {},
+            "account_error": None,
+            "account": None,
+            "market": None,
+            "market_error": None,
+        }
 
     def add_message(self, message_type, content):
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
@@ -103,6 +115,27 @@ class MessageBuffer:
         if section_name in self.report_sections:
             self.report_sections[section_name] = content
             self._update_current_report()
+
+    def set_ticker(self, ticker: str):
+        self.ticker = ticker
+
+    def update_cost_summary(self, summary):
+        self.live_metrics["costs"] = summary
+
+    def update_positions_snapshot(self, snapshot):
+        self.live_metrics["positions"] = snapshot.get("positions", [])
+        self.live_metrics["positions_error"] = snapshot.get("error")
+        pnl = snapshot.get("pnl")
+        if pnl is not None:
+            self.live_metrics["pnl"] = pnl
+
+    def update_account_snapshot(self, snapshot):
+        self.live_metrics["account"] = snapshot.get("account")
+        self.live_metrics["account_error"] = snapshot.get("error")
+
+    def update_market_snapshot(self, snapshot):
+        self.live_metrics["market"] = snapshot.get("market")
+        self.live_metrics["market_error"] = snapshot.get("error")
 
     def _update_current_report(self):
         # For the panel display, only show the most recently updated section
@@ -218,9 +251,248 @@ def create_layout():
         Layout(name="upper", ratio=3), Layout(name="analysis", ratio=5)
     )
     layout["upper"].split_row(
-        Layout(name="progress", ratio=2), Layout(name="messages", ratio=3)
+        Layout(name="progress", ratio=2),
+        Layout(name="messages", ratio=3),
+        Layout(name="dashboard", ratio=2),
     )
     return layout
+
+
+def format_currency(value):
+    if value is None:
+        return "—"
+    try:
+        return f"${float(value):,.2f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def render_live_cost_panel():
+    summary = message_buffer.live_metrics.get("costs")
+    currency = (summary or {}).get("currency", "USD")
+    table = Table(box=box.SIMPLE_HEAD, show_header=False, expand=True)
+    table.add_row(f"Currency: [bold]{currency}[/bold]")
+    if summary:
+        total = summary.get("total_cost", 0.0)
+        calls = summary.get("total_calls", 0)
+        table.add_row(f"Run Cost: [bold]{total:,.4f} {currency}[/bold]")
+        table.add_row(f"LLM Calls: {calls:,}")
+        table.add_row("")
+        mini = Table(
+            title="Top Models",
+            box=box.MINIMAL_DOUBLE_HEAD,
+            expand=True,
+            show_header=True,
+        )
+        mini.add_column("Model", style="cyan")
+        mini.add_column("Cost", justify="right")
+        models = (summary.get("models") or {}).items()
+        for model, stats in sorted(
+            models, key=lambda item: item[1].get("cost", 0), reverse=True
+        )[:3]:
+            mini.add_row(model, f"{stats.get('cost', 0):,.4f}")
+        if not models:
+            mini.add_row("—", "0.0000")
+        table.add_row(mini)
+    else:
+        table.add_row("[dim]Waiting for token usage...[/dim]")
+
+    return Panel(table, title="Live Cost Tracker", border_style="yellow", padding=(1, 1))
+
+
+def render_positions_panel():
+    metrics = message_buffer.live_metrics
+    positions = metrics.get("positions") or []
+    positions_table = Table(
+        title="Positions",
+        box=box.MINIMAL,
+        show_header=True,
+        expand=True,
+    )
+    positions_table.add_column("Symbol", style="cyan", justify="center")
+    positions_table.add_column("Qty", justify="right")
+    positions_table.add_column("Price", justify="right")
+    positions_table.add_column("P&L", justify="right")
+    if positions:
+        for pos in positions[:5]:
+            pnl = pos.get("pnl")
+            pnl_color = "green" if pnl is not None and pnl >= 0 else "red"
+            pnl_str = (
+                f"[{pnl_color}]{format_currency(pnl)}[/{pnl_color}]"
+                if pnl is not None
+                else "—"
+            )
+            positions_table.add_row(
+                pos.get("symbol", "—"),
+                pos.get("qty", "—"),
+                format_currency(pos.get("price")),
+                pnl_str,
+            )
+    else:
+        error = metrics.get("positions_error")
+        positions_table.add_row(
+            "—", "—", "—", error or "No open positions"
+        )
+
+    pnl_data = metrics.get("pnl") or {}
+    pnl_table = Table(box=box.MINIMAL, show_header=False, expand=True)
+    pnl_table.add_row("Unrealized:", format_currency(pnl_data.get("unrealized")))
+    pnl_table.add_row("Positions:", str(pnl_data.get("count") or len(positions)))
+
+    account = metrics.get("account") or {}
+    account_table = Table(box=box.MINIMAL, show_header=False, expand=True)
+    if account:
+        account_table.add_row("Cash:", format_currency(account.get("cash")))
+        account_table.add_row("Equity:", format_currency(account.get("equity")))
+        account_table.add_row(
+            "Buying Power:", format_currency(account.get("buying_power"))
+        )
+        if status := account.get("status"):
+            account_table.add_row("Status:", status)
+    else:
+        error = metrics.get("account_error")
+        account_table.add_row("Account:", error or "Unavailable")
+
+    content = Group(positions_table, pnl_table, account_table)
+    return Panel(content, title="Portfolio Snapshot", border_style="cyan", padding=(1, 1))
+
+
+def render_market_panel():
+    snapshot = message_buffer.live_metrics.get("market")
+    table = Table(box=box.SIMPLE_HEAD, show_header=False, expand=True)
+    if snapshot:
+        table.add_row("Symbol:", snapshot.get("symbol", "—"))
+        table.add_row("Price:", format_currency(snapshot.get("price")))
+        change = snapshot.get("change")
+        pct = snapshot.get("percent_change")
+        if change is not None:
+            color = "green" if change >= 0 else "red"
+            pct_str = f"{pct:+.2f}%" if pct is not None else ""
+            table.add_row(
+                "Change:",
+                f"[{color}]{change:+.2f}[/{color}] {pct_str}",
+            )
+        table.add_row("Open:", format_currency(snapshot.get("open")))
+        table.add_row("High / Low:", f"{format_currency(snapshot.get('high'))} / {format_currency(snapshot.get('low'))}")
+        volume = snapshot.get("volume")
+        if volume is not None:
+            table.add_row("Volume:", f"{volume:,.0f}")
+        if snapshot.get("five_day_change") is not None:
+            table.add_row(
+                "5D Change:",
+                f"{snapshot['five_day_change']:+.2f}%",
+            )
+        if snapshot.get("timestamp"):
+            table.add_row(
+                "Last Update:",
+                snapshot["timestamp"],
+            )
+    else:
+        error = message_buffer.live_metrics.get("market_error") or "Waiting for market data..."
+        table.add_row(error)
+
+    return Panel(table, title="Market Movement", border_style="magenta", padding=(1, 1))
+
+
+def fetch_positions_snapshot():
+    try:
+        raw = route_to_broker("get_positions")
+    except Exception as exc:  # pragma: no cover - network call
+        return {"positions": [], "error": str(exc)}
+
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    if not lines or lines[0].lower().startswith("no open positions"):
+        return {"positions": []}
+
+    positions = []
+    total_pnl = 0.0
+    for line in lines:
+        if not line.startswith("- "):
+            continue
+        # Example line: - AAPL: 10 shares @ $150.50 (P&L: $25.00)
+        try:
+            body = line[2:]
+            symbol, rest = body.split(":", 1)
+            qty_part, remainder = rest.split("shares @", 1)
+            qty = qty_part.strip()
+            price_part, pnl_part = remainder.split("(P&L:", 1)
+            price = float(price_part.replace("$", "").strip())
+            pnl_value = pnl_part.replace(")", "").replace("$", "").strip()
+            pnl = float(pnl_value)
+            total_pnl += pnl
+            positions.append(
+                {
+                    "symbol": symbol.strip(),
+                    "qty": qty,
+                    "price": price,
+                    "pnl": pnl,
+                }
+            )
+        except ValueError:
+            continue
+
+    return {
+        "positions": positions,
+        "pnl": {"unrealized": total_pnl, "count": len(positions)},
+    }
+
+
+def fetch_account_snapshot():
+    try:
+        raw = route_to_broker("get_account")
+    except Exception as exc:  # pragma: no cover - network call
+        return {"account": None, "error": str(exc)}
+
+    account = {}
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip().lower()
+        value = value.strip().replace("$", "").replace(",", "")
+        if key == "cash":
+            account["cash"] = float(value)
+        elif key == "equity":
+            account["equity"] = float(value)
+        elif key == "buying power":
+            account["buying_power"] = float(value)
+        elif key == "status":
+            account["status"] = value.upper()
+
+    return {"account": account}
+
+
+def fetch_market_snapshot(ticker: str):
+    try:
+        ticker_obj = yf.Ticker(ticker)
+        hist = ticker_obj.history(period="5d", interval="1d")
+        if hist.empty:
+            raise ValueError("No price data")
+        last = hist.iloc[-1]
+        prev_close = hist.iloc[-2]["Close"] if len(hist) > 1 else last["Open"]
+        price = float(last["Close"])
+        change = price - float(prev_close)
+        percent_change = (change / float(prev_close)) * 100 if prev_close else 0.0
+        five_day_change = None
+        if len(hist) > 1:
+            base = float(hist.iloc[0]["Close"])
+            if base:
+                five_day_change = ((price / base) - 1) * 100
+        snapshot = {
+            "symbol": ticker.upper(),
+            "price": price,
+            "open": float(last["Open"]),
+            "high": float(last["High"]),
+            "low": float(last["Low"]),
+            "volume": float(last.get("Volume", 0)),
+            "change": change,
+            "percent_change": percent_change,
+            "five_day_change": five_day_change,
+            "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+        }
+        return {"market": snapshot}
+    except Exception as exc:  # pragma: no cover - network dependent
+        return {"market": None, "error": str(exc)}
 
 
 def update_display(layout, spinner_text=None):
@@ -388,6 +660,19 @@ def update_display(layout, spinner_text=None):
             border_style="blue",
             padding=(1, 2),
         )
+    )
+
+    dashboard_columns = Columns(
+        [
+            render_live_cost_panel(),
+            render_positions_panel(),
+            render_market_panel(),
+        ],
+        equal=True,
+        expand=True,
+    )
+    layout["dashboard"].update(
+        Panel(dashboard_columns, title="Live Operations", border_style="purple", padding=(1, 1))
     )
 
     # Analysis panel showing current report
@@ -939,6 +1224,7 @@ def extract_content_string(content):
 def run_analysis():
     # First get all user selections
     selections = get_user_selections()
+    message_buffer.set_ticker(selections["ticker"])
 
     # Create config with selected research depth
     config = DEFAULT_CONFIG.copy()
@@ -1001,6 +1287,11 @@ def run_analysis():
     message_buffer.add_tool_call = save_tool_call_decorator(message_buffer, "add_tool_call")
     message_buffer.update_report_section = save_report_section_decorator(message_buffer, "update_report_section")
 
+    # Seed live dashboards before rendering
+    message_buffer.update_market_snapshot(fetch_market_snapshot(selections["ticker"]))
+    message_buffer.update_positions_snapshot(fetch_positions_snapshot())
+    message_buffer.update_account_snapshot(fetch_account_snapshot())
+
     # Now start the display layout
     layout = create_layout()
 
@@ -1052,6 +1343,7 @@ def run_analysis():
 
         # Stream the analysis
         trace = []
+        last_market_refresh = 0
         for chunk in graph.graph.stream(init_agent_state, **args):
             if len(chunk["messages"]) > 0:
                 # Get the last message from the chunk
@@ -1328,6 +1620,14 @@ def run_analysis():
                         "Compliance Officer", "completed"
                     )
 
+                message_buffer.update_cost_summary(graph.cost_tracker.summary())
+                now = time.time()
+                if now - last_market_refresh > 30:
+                    message_buffer.update_market_snapshot(
+                        fetch_market_snapshot(selections["ticker"])
+                    )
+                    last_market_refresh = now
+
                 # Update the display
                 update_display(layout)
 
@@ -1336,6 +1636,11 @@ def run_analysis():
         # Get final state and decision
         final_state = trace[-1]
         decision = graph.process_signal(final_state["final_trade_decision"])
+
+        message_buffer.update_cost_summary(final_state.get("cost_statistics"))
+        message_buffer.update_positions_snapshot(fetch_positions_snapshot())
+        message_buffer.update_account_snapshot(fetch_account_snapshot())
+        message_buffer.update_market_snapshot(fetch_market_snapshot(selections["ticker"]))
 
         # Update all agent statuses to completed
         for agent in message_buffer.agent_status:

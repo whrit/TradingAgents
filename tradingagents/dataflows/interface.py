@@ -16,7 +16,7 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news
 )
 from .alpha_vantage_news import get_global_news as get_alpha_vantage_global_news
-from .alpha_vantage_common import AlphaVantageRateLimitError
+from .alpha_vantage_common import AlphaVantageRateLimitError, AlphaVantagePremiumError
 from .alpaca import get_stock_data as get_alpaca_stock_data
 from .alpaca.common import AlpacaRateLimitError
 
@@ -215,6 +215,11 @@ def route_to_vendor(method: str, *args, **kwargs):
                     print(f"RATE_LIMIT: Alpha Vantage rate limit exceeded, falling back to next available vendor")
                     print(f"DEBUG: Rate limit details: {e}")
                 # Continue to next vendor for fallback
+                continue
+            except AlphaVantagePremiumError as e:
+                if vendor == "alpha_vantage":
+                    print("INFO: Alpha Vantage premium endpoint encountered; falling back to next vendor")
+                    print(f"DEBUG: Premium details: {e}")
                 continue
             except AlpacaRateLimitError as e:
                 if vendor == "alpaca":
