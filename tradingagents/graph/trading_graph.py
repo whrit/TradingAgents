@@ -7,14 +7,17 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import ToolNode
 from tradingagents.brokers.interface import route_to_broker
 
 from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.metrics import (
+    CostTracker,
+    CostTrackingChatAnthropic,
+    CostTrackingChatGoogle,
+    CostTrackingChatOpenAI,
+)
 from tradingagents.agents.utils.memory import FinancialSituationMemory
 from tradingagents.agents.utils.agent_states import (
     AgentState,
@@ -66,6 +69,11 @@ class TradingAgentsGraph:
         self.debug = debug
         self.config = config or DEFAULT_CONFIG
 
+        self.cost_tracker = CostTracker(
+            self.config.get("model_pricing"),
+            currency=self.config.get("cost_currency", "USD"),
+        )
+
         # Update the interface's config
         set_config(self.config)
 
@@ -76,15 +84,41 @@ class TradingAgentsGraph:
         )
 
         # Initialize LLMs
-        if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"])
-            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"])
+        if (
+            self.config["llm_provider"].lower() == "openai"
+            or self.config["llm_provider"] == "ollama"
+            or self.config["llm_provider"] == "openrouter"
+        ):
+            self.deep_thinking_llm = CostTrackingChatOpenAI(
+                model=self.config["deep_think_llm"],
+                base_url=self.config["backend_url"],
+                cost_tracker=self.cost_tracker,
+            )
+            self.quick_thinking_llm = CostTrackingChatOpenAI(
+                model=self.config["quick_think_llm"],
+                base_url=self.config["backend_url"],
+                cost_tracker=self.cost_tracker,
+            )
         elif self.config["llm_provider"].lower() == "anthropic":
-            self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"])
-            self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"])
+            self.deep_thinking_llm = CostTrackingChatAnthropic(
+                model=self.config["deep_think_llm"],
+                base_url=self.config["backend_url"],
+                cost_tracker=self.cost_tracker,
+            )
+            self.quick_thinking_llm = CostTrackingChatAnthropic(
+                model=self.config["quick_think_llm"],
+                base_url=self.config["backend_url"],
+                cost_tracker=self.cost_tracker,
+            )
         elif self.config["llm_provider"].lower() == "google":
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"])
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"])
+            self.deep_thinking_llm = CostTrackingChatGoogle(
+                model=self.config["deep_think_llm"],
+                cost_tracker=self.cost_tracker,
+            )
+            self.quick_thinking_llm = CostTrackingChatGoogle(
+                model=self.config["quick_think_llm"],
+                cost_tracker=self.cost_tracker,
+            )
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
@@ -110,6 +144,7 @@ class TradingAgentsGraph:
             self.invest_judge_memory,
             self.risk_manager_memory,
             self.conditional_logic,
+            self.cost_tracker,
         )
 
         self.propagator = Propagator()
@@ -178,6 +213,7 @@ class TradingAgentsGraph:
         """Run the trading agents graph for a company on a specific date."""
 
         self.ticker = company_name
+        self.cost_tracker.reset()
 
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
@@ -199,6 +235,8 @@ class TradingAgentsGraph:
         else:
             # Standard mode without tracing
             final_state = self.graph.invoke(init_agent_state, **args)
+
+        final_state["cost_statistics"] = self.cost_tracker.summary()
 
         # Store current state for reflection
         self.curr_state = final_state
@@ -254,6 +292,7 @@ class TradingAgentsGraph:
             "execution_plan": final_state.get("execution_plan"),
             "compliance_report": final_state.get("compliance_report"),
             "compliance_status": final_state.get("compliance_status"),
+            "cost_statistics": final_state.get("cost_statistics"),
         }
 
         # Save to file

@@ -7,6 +7,7 @@ from langgraph.prebuilt import ToolNode
 
 from tradingagents.agents import *
 from tradingagents.agents.utils.agent_states import AgentState
+from tradingagents.metrics import CostTracker
 
 from .conditional_logic import ConditionalLogic
 
@@ -44,6 +45,7 @@ class GraphSetup:
         invest_judge_memory,
         risk_manager_memory,
         conditional_logic: ConditionalLogic,
+        cost_tracker: CostTracker,
     ):
         """Initialize with required components."""
         self.quick_thinking_llm = quick_thinking_llm
@@ -55,6 +57,7 @@ class GraphSetup:
         self.invest_judge_memory = invest_judge_memory
         self.risk_manager_memory = risk_manager_memory
         self.conditional_logic = conditional_logic
+        self.cost_tracker = cost_tracker
 
     def setup_graph(
         self, selected_analysts=["macro", "market", "social", "news", "fundamentals", "alternative"]
@@ -78,35 +81,60 @@ class GraphSetup:
         for analyst_key in selected_analysts:
             if analyst_key not in ANALYST_FACTORIES:
                 raise ValueError(f"Unknown analyst type '{analyst_key}'")
+            label = ANALYST_LABELS[analyst_key]
+            node_fn = ANALYST_FACTORIES[analyst_key](self.quick_thinking_llm)
+            wrapped_node = self.cost_tracker.wrap_section(label, node_fn)
             analyst_nodes[analyst_key] = {
-                "label": ANALYST_LABELS[analyst_key],
-                "node": ANALYST_FACTORIES[analyst_key](self.quick_thinking_llm),
+                "label": label,
+                "node": wrapped_node,
                 "clear": create_msg_delete(),
                 "tools": self.tool_nodes.get(analyst_key),
             }
 
         # Create researcher and manager nodes
-        bull_researcher_node = create_bull_researcher(
-            self.quick_thinking_llm, self.bull_memory
+        bull_researcher_node = self.cost_tracker.wrap_section(
+            "Bull Researcher",
+            create_bull_researcher(self.quick_thinking_llm, self.bull_memory),
         )
-        bear_researcher_node = create_bear_researcher(
-            self.quick_thinking_llm, self.bear_memory
+        bear_researcher_node = self.cost_tracker.wrap_section(
+            "Bear Researcher",
+            create_bear_researcher(self.quick_thinking_llm, self.bear_memory),
         )
-        research_manager_node = create_research_manager(
-            self.deep_thinking_llm, self.invest_judge_memory
+        research_manager_node = self.cost_tracker.wrap_section(
+            "Research Manager",
+            create_research_manager(
+                self.deep_thinking_llm, self.invest_judge_memory
+            ),
         )
-        trader_node = create_trader(self.quick_thinking_llm, self.trader_memory)
-        risk_quant_node = create_risk_quant(self.quick_thinking_llm)
+        trader_node = self.cost_tracker.wrap_section(
+            "Trader", create_trader(self.quick_thinking_llm, self.trader_memory)
+        )
+        risk_quant_node = self.cost_tracker.wrap_section(
+            "Risk Quant Analyst", create_risk_quant(self.quick_thinking_llm)
+        )
 
         # Create risk analysis nodes
-        risky_analyst = create_risky_debator(self.quick_thinking_llm)
-        neutral_analyst = create_neutral_debator(self.quick_thinking_llm)
-        safe_analyst = create_safe_debator(self.quick_thinking_llm)
-        risk_manager_node = create_risk_manager(
-            self.deep_thinking_llm, self.risk_manager_memory
+        risky_analyst = self.cost_tracker.wrap_section(
+            "Risky Analyst", create_risky_debator(self.quick_thinking_llm)
         )
-        execution_strategist_node = create_execution_strategist(self.quick_thinking_llm)
-        compliance_officer_node = create_compliance_officer(self.quick_thinking_llm)
+        neutral_analyst = self.cost_tracker.wrap_section(
+            "Neutral Analyst", create_neutral_debator(self.quick_thinking_llm)
+        )
+        safe_analyst = self.cost_tracker.wrap_section(
+            "Safe Analyst", create_safe_debator(self.quick_thinking_llm)
+        )
+        risk_manager_node = self.cost_tracker.wrap_section(
+            "Risk Judge",
+            create_risk_manager(self.deep_thinking_llm, self.risk_manager_memory),
+        )
+        execution_strategist_node = self.cost_tracker.wrap_section(
+            "Execution Strategist",
+            create_execution_strategist(self.quick_thinking_llm),
+        )
+        compliance_officer_node = self.cost_tracker.wrap_section(
+            "Compliance Officer",
+            create_compliance_officer(self.quick_thinking_llm),
+        )
 
         # Create workflow
         workflow = StateGraph(AgentState)

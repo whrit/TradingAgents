@@ -803,6 +803,63 @@ def display_complete_report(final_state):
             )
         )
 
+    # VII. Run Cost Summary
+    cost_stats = final_state.get("cost_statistics")
+    if cost_stats:
+        currency = cost_stats.get("currency", "USD")
+        total_cost = cost_stats.get("total_cost", 0.0)
+
+        models_table = Table(
+            title="Model Cost Breakdown",
+            box=box.SIMPLE_HEAD,
+            expand=True,
+        )
+        models_table.add_column("Model", style="cyan")
+        models_table.add_column("Calls", justify="right")
+        models_table.add_column("Input Tokens", justify="right")
+        models_table.add_column("Output Tokens", justify="right")
+        models_table.add_column(f"Cost ({currency})", justify="right")
+
+        if cost_stats.get("models"):
+            for model_name, stats in sorted(cost_stats["models"].items()):
+                models_table.add_row(
+                    model_name,
+                    f"{stats.get('calls', 0):,}",
+                    f"{stats.get('input_tokens', 0):,}",
+                    f"{stats.get('output_tokens', 0):,}",
+                    f"{stats.get('cost', 0.0):,.4f}",
+                )
+        else:
+            models_table.add_row("—", "0", "0", "0", f"{0.0:,.4f}")
+
+        sections_table = Table(
+            title="Section Cost Breakdown",
+            box=box.SIMPLE_HEAD,
+            expand=True,
+        )
+        sections_table.add_column("Section", style="magenta")
+        sections_table.add_column("Calls", justify="right")
+        sections_table.add_column("Cost", justify="right")
+
+        if cost_stats.get("sections"):
+            for section, stats in sorted(cost_stats["sections"].items()):
+                sections_table.add_row(
+                    section,
+                    f"{stats.get('calls', 0):,}",
+                    f"{stats.get('cost', 0.0):,.4f}",
+                )
+        else:
+            sections_table.add_row("—", "0", f"{0.0:,.4f}")
+
+        console.print(
+            Panel(
+                Columns([models_table, sections_table], equal=True, expand=True),
+                title=f"VII. Run Cost Summary — Total {currency} {total_cost:,.4f}",
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
+
 
 def prompt_trade_execution(final_state, config):
     trade = final_state.get("proposed_trade")

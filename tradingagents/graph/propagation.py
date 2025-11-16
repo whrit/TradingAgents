@@ -47,6 +47,7 @@ class Propagator:
             "compliance_report": "",
             "compliance_status": "PENDING",
             "proposed_trade": None,
+            "cost_statistics": {},
         }
 
     def get_graph_args(self) -> Dict[str, Any]:

@@ -82,3 +82,4 @@ class AgentState(MessagesState):
     compliance_report: Annotated[str, "Compliance officer summary"]
     compliance_status: Annotated[str, "APPROVED/BLOCKED status"]
     proposed_trade: Annotated[Optional[Dict[str, Any]], "Structured trade instruction"]
+    cost_statistics: Annotated[Dict[str, Any], "Aggregated LLM usage and costs"]

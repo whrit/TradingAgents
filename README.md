@@ -225,6 +225,10 @@ print(decision)
 
 You can view the full list of configurations in `tradingagents/default_config.py`.
 
+### Tracking LLM Costs Per Run
+
+TradingAgents now estimates the dollar cost of each run by combining token usage with the `model_pricing` entries in `default_config.py`. Provide the per-1K token input/output rates for each model you intend to use (OpenAI, Anthropic/Claude, Google/Gemini, etc.) and set the optional `cost_currency`. During every propagation the framework tracks which section (macro, research, risk, execution, compliance, etc.) called which model, aggregates the totals, and renders per-model, per-section, and overall cost tables at the end of the CLI workflow. This makes it easy to sanity-check spend for different agent rosters or LLM backbones before rolling changes into production.
+
 ## Contributing
 
 We welcome contributions from the community! Whether it's fixing a bug, improving documentation, or suggesting a new feature, your input helps make this project better. If you are interested in this line of research, please consider joining our open-source financial AI research community [Tauric Research](https://tauric.ai/).
