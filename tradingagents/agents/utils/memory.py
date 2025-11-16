@@ -7,6 +7,16 @@ try:
 except ImportError:  # pragma: no cover - voyage is optional for some environments
     voyageai = None
 
+VOYAGE_MODEL_SPECS = {
+    "voyage-3-large": {"context": 32000, "dimensions": [1024, 256, 512, 2048], "default": 1024},
+    "voyage-3.5": {"context": 32000, "dimensions": [1024, 256, 512, 2048], "default": 1024},
+    "voyage-3.5-lite": {"context": 32000, "dimensions": [1024, 256, 512, 2048], "default": 1024},
+    "voyage-code-3": {"context": 32000, "dimensions": [1024, 256, 512, 2048], "default": 1024},
+    "voyage-finance-2": {"context": 32000, "dimensions": [1024], "default": 1024},
+    "voyage-law-2": {"context": 16000, "dimensions": [1024], "default": 1024},
+    "voyage-code-2": {"context": 16000, "dimensions": [1536], "default": 1536},
+}
+
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
@@ -21,6 +31,22 @@ class FinancialSituationMemory:
                     "voyageai package is required when embedding_provider='voyage'"
                 )
             self.embedding_model = self.embedding_model or "voyage-3.5"
+            spec = VOYAGE_MODEL_SPECS.get(self.embedding_model)
+            if not spec:
+                raise ValueError(
+                    f"Unsupported voyage embedding model '{self.embedding_model}'. "
+                    f"Supported models: {', '.join(VOYAGE_MODEL_SPECS.keys())}"
+                )
+            requested_dim = config.get("embedding_output_dimension")
+            if requested_dim is None:
+                requested_dim = spec["default"]
+            elif requested_dim not in spec["dimensions"]:
+                raise ValueError(
+                    f"embedding_output_dimension {requested_dim} not supported for "
+                    f"{self.embedding_model}. Allowed: {spec['dimensions']}"
+                )
+            self.voyage_context_length = spec["context"]
+            self.embedding_output_dimension = requested_dim
             self.voyage_client = voyageai.Client()
         else:
             # Default to OpenAI embeddings
@@ -37,7 +63,10 @@ class FinancialSituationMemory:
         """Get an embedding for a text via configured provider."""
         if self.embedding_provider == "voyage":
             response = self.voyage_client.embed(
-                [text], model=self.embedding_model, input_type=None
+                [text],
+                model=self.embedding_model,
+                input_type=None,
+                output_dimension=self.embedding_output_dimension,
             )
             return response.embeddings[0]
 

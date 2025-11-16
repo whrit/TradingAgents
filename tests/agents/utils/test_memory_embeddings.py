@@ -25,8 +25,8 @@ class DummyVoyageClient:
     def __init__(self):
         self.calls = []
 
-    def embed(self, texts, model, input_type=None):
-        self.calls.append((texts, model, input_type))
+    def embed(self, texts, model, input_type=None, output_dimension=None):
+        self.calls.append((texts, model, input_type, output_dimension))
         return SimpleNamespace(embeddings=[[0.5, 0.6, 0.7]])
 
 
@@ -64,4 +64,43 @@ def test_memory_supports_voyage_embeddings(monkeypatch):
     assert vec == [0.5, 0.6, 0.7]
     assert mem.embedding_provider == "voyage"
     assert mem.embedding_model == "voyage-3.5"
-    assert mem.voyage_client.calls == [(["market outlook"], "voyage-3.5", None)]
+    assert mem.voyage_client.calls == [
+        (["market outlook"], "voyage-3.5", None, 1024)
+    ]
+
+
+def test_memory_voyage_custom_dimension(monkeypatch):
+    monkeypatch.setattr(memory, "OpenAI", DummyOpenAI)
+    monkeypatch.setattr(memory, "voyageai", SimpleNamespace(Client=DummyVoyageClient))
+
+    mem = FinancialSituationMemory(
+        "test-memory-voyage-512",
+        {
+            "backend_url": "https://api.openai.com/v1",
+            "embedding_provider": "voyage",
+            "embedding_model": "voyage-3.5-lite",
+            "embedding_output_dimension": 512,
+        },
+    )
+
+    vec = mem.get_embedding("macro outlook")
+    assert vec == [0.5, 0.6, 0.7]
+    assert mem.voyage_client.calls == [
+        (["macro outlook"], "voyage-3.5-lite", None, 512)
+    ]
+
+
+def test_memory_voyage_invalid_dimension(monkeypatch):
+    monkeypatch.setattr(memory, "OpenAI", DummyOpenAI)
+    monkeypatch.setattr(memory, "voyageai", SimpleNamespace(Client=DummyVoyageClient))
+
+    with pytest.raises(ValueError):
+        FinancialSituationMemory(
+            "test-memory-voyage-invalid",
+            {
+                "backend_url": "https://api.openai.com/v1",
+                "embedding_provider": "voyage",
+                "embedding_model": "voyage-finance-2",
+                "embedding_output_dimension": 512,
+            },
+        )

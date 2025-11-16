@@ -198,6 +198,7 @@ config["data_vendors"] = {
 # Optional: switch embeddings to Voyage AI (requires VOYAGE_API_KEY)
 config["embedding_provider"] = "voyage"
 config["embedding_model"] = "voyage-3.5"
+config["embedding_output_dimension"] = 512  # Must be supported by the selected Voyage model
 
 # Initialize with custom config
 ta = TradingAgentsGraph(debug=True, config=config)

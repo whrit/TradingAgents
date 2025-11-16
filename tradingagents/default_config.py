@@ -19,7 +19,7 @@ DEFAULT_CONFIG = {
     "max_recur_limit": 100,
     # Embedding defaults
     "embedding_provider": "voyage",
-    "embedding_model": "text-embedding-3-small",
+    "embedding_model": "voyage-finance-2",
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
     "data_vendors": {
