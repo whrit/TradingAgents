@@ -16,8 +16,8 @@ DEFAULT_CONFIG = {
     "cost_currency": os.getenv("COST_CURRENCY", "USD"),
     "model_pricing": {
         # USD cost per 1K tokens for each provider/model combination.
-        "gpt-5.1": {"input_cost_per_1k_tokens": 0.015, "output_cost_per_1k_tokens": 0.06},
-        "gpt-5-mini": {"input_cost_per_1k_tokens": 0.003, "output_cost_per_1k_tokens": 0.009},
+        "gpt-5.1": {"input_cost_per_1k_tokens": 0.00125, "output_cost_per_1k_tokens": 0.01},
+        "gpt-5-mini": {"input_cost_per_1k_tokens": 0.00025, "output_cost_per_1k_tokens": 0.002},
         "claude-3-5-sonnet-20241022": {"input_cost_per_1k_tokens": 0.015, "output_cost_per_1k_tokens": 0.075},
         "claude-3-5-haiku-20241022": {"input_cost_per_1k_tokens": 0.0015, "output_cost_per_1k_tokens": 0.005},
         "gemini-2.5-flash-preview-05-20": {"input_cost_per_1k_tokens": 0.0025, "output_cost_per_1k_tokens": 0.0075},
