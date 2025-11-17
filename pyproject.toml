@@ -43,5 +43,6 @@ dependencies = [
     "typing-extensions>=4.14.0",
     "urllib3>=2.4.0",
     "voyageai>=0.3.5",
+    "wrds>=3.1.6",
     "yfinance>=0.2.63",
 ]

@@ -29,6 +29,7 @@ pydantic
 questionary
 langchain_anthropic
 langchain-google-genai
+wrds
 
 # Alpaca Trading Integration
 alpaca-py

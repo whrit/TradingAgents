@@ -39,6 +39,7 @@ DEFAULT_CONFIG = {
         "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
         "news_data": "news_api_lite,google",        # Options: news_api_lite, openai, alpha_vantage, google, local
         "options_data": "alpaca",          # Options: yfinance
+        "institutional_data": "wrds",      # Options: wrds
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {

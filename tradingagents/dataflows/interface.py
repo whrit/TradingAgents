@@ -24,6 +24,14 @@ from .alpha_vantage_common import AlphaVantageRateLimitError, AlphaVantagePremiu
 from .alpaca import get_stock_data as get_alpaca_stock_data
 from .alpaca.common import AlpacaRateLimitError
 from .options import get_options_chain
+from .wrds_data import (
+    run_wrds_query,
+    get_wrds_table as get_wrds_table_wrds,
+    list_wrds_libraries as list_wrds_libraries_wrds,
+    list_wrds_tables as list_wrds_tables_wrds,
+    describe_wrds_table as describe_wrds_table_wrds,
+    list_wrds_products as list_wrds_products_wrds,
+)
 
 # Configuration and routing logic
 from .config import get_config
@@ -66,6 +74,17 @@ TOOLS_CATEGORIES = {
             "get_options_data",
         ],
     },
+    "institutional_data": {
+        "description": "Research-grade WRDS datasets",
+        "tools": [
+            "run_wrds_query",
+            "get_wrds_table",
+            "list_wrds_libraries",
+            "list_wrds_tables",
+            "describe_wrds_table",
+            "list_wrds_products",
+        ],
+    },
 }
 
 VENDOR_LIST = [
@@ -77,6 +96,7 @@ VENDOR_LIST = [
     "google",
     "options",
     "news_api_lite",
+    "wrds",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -139,6 +159,25 @@ VENDOR_METHODS = {
     # options_data
     "get_options_data": {
         "yfinance": get_options_chain,
+    },
+    # WRDS institutional access
+    "run_wrds_query": {
+        "wrds": run_wrds_query,
+    },
+    "get_wrds_table": {
+        "wrds": get_wrds_table_wrds,
+    },
+    "list_wrds_libraries": {
+        "wrds": list_wrds_libraries_wrds,
+    },
+    "list_wrds_tables": {
+        "wrds": list_wrds_tables_wrds,
+    },
+    "describe_wrds_table": {
+        "wrds": describe_wrds_table_wrds,
+    },
+    "list_wrds_products": {
+        "wrds": list_wrds_products_wrds,
     },
 }
 
