@@ -16,9 +16,9 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news
 )
 from .alpha_vantage_news import get_global_news as get_alpha_vantage_global_news
-from .tiingo_news import (
-    get_tiingo_news as get_tiingo_vendor_news,
-    get_tiingo_global_news as get_tiingo_vendor_global_news,
+from .news_api_lite import (
+    get_news_api_lite as get_news_api_lite_vendor,
+    get_news_api_lite_global as get_news_api_lite_global_vendor,
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError, AlphaVantagePremiumError
 from .alpaca import get_stock_data as get_alpaca_stock_data
@@ -76,7 +76,7 @@ VENDOR_LIST = [
     "openai",
     "google",
     "options",
-    "tiingo",
+    "news_api_lite",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -116,14 +116,14 @@ VENDOR_METHODS = {
     },
     # news_data
     "get_news": {
-        "tiingo": get_tiingo_vendor_news,
+        "news_api_lite": get_news_api_lite_vendor,
         "alpha_vantage": get_alpha_vantage_news,
         "openai": get_stock_news_openai,
         "google": get_google_news,
         "local": [get_finnhub_news, get_reddit_company_news, get_google_news],
     },
     "get_global_news": {
-        "tiingo": get_tiingo_vendor_global_news,
+        "news_api_lite": get_news_api_lite_global_vendor,
         "alpha_vantage": get_alpha_vantage_global_news,
         "openai": get_global_news_openai,
         "local": get_reddit_global_news

@@ -734,7 +734,7 @@ ALPACA_PAPER_SECRET_KEY=your_paper_secret_key_here
 
 # Other API Keys
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-TIINGO_API_KEY=your_tiingo_key
+WEBZ_API_TOKEN=your_news_api_lite_token
 OPENAI_API_KEY=your_openai_key
 ```
 

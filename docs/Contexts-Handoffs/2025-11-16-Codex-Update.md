@@ -6,7 +6,7 @@
   - Added reusable helper metadata (record count, timeframe, source, optional errors) so downstream consumers (risk engine, CLI, agents) can rely on a single schema.
   - Risk engine now parses these JSON payloads directly, eliminating CSV parsing logic and preventing “insufficient price history” issues caused by malformed indexes.
 - **News vendor upgrade**
-  - `tiingo_news.get_news` / `get_global_news` now power all ticker and macro queries with async rate limiting, categorization, and scoring. Empty article sets raise a ValueError so the router immediately falls back to OpenAI or Google, ensuring “fresh” data.
+  - `news_api_lite.get_news` / `get_global_news` now power all ticker and macro queries with deterministic pagination, categorization, and scoring. Empty article sets raise a ValueError so the router immediately falls back to OpenAI or Google, ensuring “fresh” data.
 - **CLI visualization & payoff enhancements**
   - Added price sparklines, realized volatility stats, options/volatility tables, and options/equity payoff panels to the final CLI report.
   - Report sections renumbered to include the new “Market Visuals & Payoffs” block and risk visuals now appear as Section IX.
@@ -38,7 +38,7 @@
 ## 4. Outstanding Issues & Next Steps
 1. **Dependent docs/tests**: Documentation (e.g., `docs/alpaca-usage-guide.md`) still references CSV outputs; update guides/snippets to reflect JSON payloads.
 2. **Downstream consumers**: Any scripts or notebooks parsing `get_stock_data` CSVs must migrate to JSON; audit `docs/` samples and internal tools.
-3. **Google News fallback**: Configuration now defaults to Tiingo for `news_data`. If persistent “no fresh data” warnings remain, flip `DEFAULT_CONFIG["data_vendors"]["news_data"]` to `tiingo,google` (or set a tool-level override) so we always have at least one public fallback.
+3. **Google News fallback**: Configuration now defaults to News API Lite for `news_data`. If persistent “no fresh data” warnings remain, flip `DEFAULT_CONFIG["data_vendors"]["news_data"]` to `news_api_lite,google` (or set a tool-level override) so we always have at least one public fallback.
 4. **Options multi-leg support**: Current Execution Strategist only selects single-leg contracts; future work could extend `_build_option_instruction` to detect strategy requests (spreads/straddles) and populate `legs`.
 5. **Visualization polish**: New CLI panels rely on yfinance & options calls per run; consider caching to reduce vendor pressure and handle failures gracefully (currently prints panel-level warnings).
 
@@ -53,7 +53,7 @@
   - `tradingagents/dataflows/alpha_vantage_stock.py`,
   - `tradingagents/dataflows/y_finance.py`,
   - `tradingagents/dataflows/local.py`,
-  - `tradingagents/dataflows/tiingo_news.py`,
+  - `tradingagents/dataflows/news_api_lite.py`,
   - `tradingagents/dataflows/alpaca/data.py`,
   - `tradingagents/agents/utils/risk_engine.py`,
   - `cli/main.py`,
