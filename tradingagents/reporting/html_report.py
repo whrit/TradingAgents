@@ -23,11 +23,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         :root {{
             color-scheme: dark;
             --bg: #05060a;
-            --panel: #111827;
-            --border: #1f2937;
+            --panel: #0f172a;
+            --border: #1e293b;
             --accent: #3b82f6;
             --accent-faded: rgba(59,130,246,0.15);
-            --muted: #9ca3af;
+            --muted: #94a3b8;
         }}
         * {{
             box-sizing: border-box;
@@ -36,15 +36,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             margin: 0;
             padding: 2rem;
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: radial-gradient(circle at top, rgba(59,130,246,0.15), transparent 35%), var(--bg);
-            color: #f3f4f6;
+            background: radial-gradient(circle at top, rgba(59,130,246,0.18), transparent 35%), var(--bg);
+            color: #e2e8f0;
         }}
         header {{
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            gap: 1rem;
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }}
         header h1 {{
@@ -53,38 +53,44 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }}
         .meta {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 0.75rem;
         }}
         .meta span {{
             display: block;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             color: var(--muted);
         }}
         .meta strong {{
             font-size: 1rem;
+        }}
+        .meta div {{
+            background: rgba(15,23,42,0.7);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.85rem;
         }}
         .grid {{
             display: grid;
             gap: 1.5rem;
         }}
         .grid.two {{
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }}
-        .grid.risk {{
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         }}
         .card {{
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 18px;
             padding: 1.5rem;
-            box-shadow: 0 20px 45px rgba(0,0,0,0.35);
+            box-shadow: 0 20px 45px rgba(5,10,30,0.55);
         }}
         h2 {{
             margin-top: 0;
-            color: #e5e7eb;
-            font-size: 1.35rem;
+            color: #f8fafc;
+            font-size: 1.4rem;
+        }}
+        .chart-stack canvas {{
+            margin-top: 0.5rem;
         }}
         table {{
             width: 100%;
@@ -118,8 +124,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 0;
             margin: 1rem 0 0;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 0.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
         }}
         .stats-list li {{
             background: var(--accent-faded);
@@ -132,6 +138,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: var(--muted);
         }}
         .stats-list strong {{
+            font-size: 1rem;
+        }}
+        .highlight-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }}
+        .highlight {{
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1rem;
+            background: rgba(15,23,42,0.6);
+        }}
+        .highlight h3 {{
+            margin-top: 0;
+            margin-bottom: 0.35rem;
             font-size: 1rem;
         }}
         section.narratives {{
@@ -173,14 +195,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <section class="grid two">
         <article class="card">
             <h2>Price Action & Volatility</h2>
-            <canvas id="priceChart" height="200"></canvas>
             {price_stats_html}
+            <div class="chart-stack">
+                <canvas id="priceChart" height="200"></canvas>
+                <canvas id="volumeChart" height="120"></canvas>
+            </div>
         </article>
         <article class="card">
             <h2>Options & Volatility Snapshot</h2>
+            {options_metrics_html}
+            <div class="chart-stack">
+                <canvas id="optionsChart" height="200"></canvas>
+                <canvas id="optionIvChart" height="140"></canvas>
+            </div>
             {options_summary_html}
             {options_table_html}
-            <canvas id="optionsChart" height="200"></canvas>
         </article>
     </section>
 
@@ -197,6 +226,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </section>
 
     <section class="card" style="margin-top:1.5rem;">
+        <h2>Highlights & Narratives</h2>
+        {news_highlights_html}
+    </section>
+
+    <section class="card" style="margin-top:1.5rem;">
         <h2>Cost Summary</h2>
         {cost_html}
     </section>
@@ -209,6 +243,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         const priceLabels = {price_chart_labels};
         const priceValues = {price_chart_prices};
+        const volumeLabels = {volume_chart_labels};
+        const volumeValues = {volume_chart_values};
         const priceCanvas = document.getElementById("priceChart");
         if (priceLabels.length && priceValues.length) {{
             new Chart(priceCanvas, {{
@@ -240,9 +276,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             priceCanvas.replaceWith(placeholder);
         }}
 
+        const volumeCanvas = document.getElementById("volumeChart");
+        if (volumeCanvas && volumeLabels.length && volumeValues.length) {{
+            new Chart(volumeCanvas, {{
+                type: "bar",
+                data: {{
+                    labels: volumeLabels,
+                    datasets: [{{
+                        label: "Volume",
+                        data: volumeValues,
+                        backgroundColor: "rgba(99,102,241,0.4)",
+                        borderRadius: 4,
+                    }}],
+                }},
+                options: {{
+                    plugins: {{ legend: {{ display: false }} }},
+                    scales: {{
+                        x: {{ display: false }},
+                        y: {{ ticks: {{ color: "#9ca3af" }} }},
+                    }},
+                }},
+            }});
+        }} else if (volumeCanvas) {{ volumeCanvas.remove(); }}
+
         const optionStrikes = {options_chart_labels};
         const callOpenInterest = {options_chart_calls};
         const putOpenInterest = {options_chart_puts};
+        const optionIvLabels = {option_iv_labels};
+        const optionIvCalls = {option_iv_calls};
+        const optionIvPuts = {option_iv_puts};
         const optionCanvas = document.getElementById("optionsChart");
         if (optionStrikes.length && (callOpenInterest.length || putOpenInterest.length)) {{
             new Chart(optionCanvas, {{
@@ -276,6 +338,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             placeholder.textContent = "Options snapshot unavailable.";
             optionCanvas.replaceWith(placeholder);
         }}
+
+        const optionIvCanvas = document.getElementById("optionIvChart");
+        if (optionIvCanvas && optionIvLabels.length && (optionIvCalls.length || optionIvPuts.length)) {{
+            new Chart(optionIvCanvas, {{
+                type: "line",
+                data: {{
+                    labels: optionIvLabels,
+                    datasets: [
+                        {{ label: "Call IV", data: optionIvCalls, borderColor: "#f472b6", tension: 0.3 }},
+                        {{ label: "Put IV", data: optionIvPuts, borderColor: "#14b8a6", tension: 0.3 }},
+                    ],
+                }},
+                options: {{
+                    scales: {{
+                        x: {{ ticks: {{ color: "#9ca3af" }} }},
+                        y: {{ ticks: {{ color: "#9ca3af" }} }},
+                    }},
+                }},
+            }});
+        }} else if (optionIvCanvas) {{ optionIvCanvas.remove(); }}
 
         const payoffLabels = {payoff_labels};
         const payoffValues = {payoff_values};
@@ -358,9 +440,14 @@ def generate_html_report(
 
     price_chart_labels = json.dumps(price_data.get("labels") or [])
     price_chart_prices = json.dumps(price_data.get("prices") or [])
+    volume_chart_labels = json.dumps(price_data.get("volume_labels") or [])
+    volume_chart_values = json.dumps(price_data.get("volume_values") or [])
     options_chart_labels = json.dumps(options_data.get("chart_strikes") or [])
     options_chart_calls = json.dumps(options_data.get("chart_calls") or [])
     options_chart_puts = json.dumps(options_data.get("chart_puts") or [])
+    option_iv_labels = json.dumps(options_data.get("iv_labels") or [])
+    option_iv_calls = json.dumps(options_data.get("iv_calls") or [])
+    option_iv_puts = json.dumps(options_data.get("iv_puts") or [])
     payoff_labels = json.dumps((payoff_data or {}).get("labels") or [])
     payoff_values = json.dumps((payoff_data or {}).get("values") or [])
 
@@ -379,8 +466,10 @@ def generate_html_report(
         ),
         trade_summary=escape(_summarize_trade(final_state)),
         price_stats_html=_render_price_stats(price_data),
+        options_metrics_html=_render_options_metrics(options_data),
         options_summary_html=_render_options_summary(options_data),
         options_table_html=_render_options_tables(options_data),
+        news_highlights_html=_render_highlights(final_state),
         payoff_summary=escape(
             (payoff_data or {}).get("details", "No executable trade available.")
         ),
@@ -389,9 +478,14 @@ def generate_html_report(
         sections_html=_render_agent_sections(final_state),
         price_chart_labels=price_chart_labels,
         price_chart_prices=price_chart_prices,
+        volume_chart_labels=volume_chart_labels,
+        volume_chart_values=volume_chart_values,
         options_chart_labels=options_chart_labels,
         options_chart_calls=options_chart_calls,
         options_chart_puts=options_chart_puts,
+        option_iv_labels=option_iv_labels,
+        option_iv_calls=option_iv_calls,
+        option_iv_puts=option_iv_puts,
         payoff_labels=payoff_labels,
         payoff_values=payoff_values,
         chart_accent="#3b82f6",
@@ -419,6 +513,15 @@ def _collect_price_data(ticker: str) -> Dict[str, Any]:
     data["labels"] = [idx.strftime("%Y-%m-%d") for idx in closes.index]
     data["prices"] = [round(float(value), 2) for value in closes]
     data["latest_price"] = round(float(closes.iloc[-1]), 2)
+    volumes = hist.get("Volume")
+    if volumes is not None and not volumes.dropna().empty:
+        vol = volumes.dropna()
+        data["volume_labels"] = [idx.strftime("%Y-%m-%d") for idx in vol.index]
+        data["volume_values"] = [int(v) for v in vol]
+        data["avg_volume"] = int(vol.mean())
+    else:
+        data["volume_labels"] = []
+        data["volume_values"] = []
 
     one_month_window = min(len(closes) - 1, 21)
     data["changes"] = {
@@ -430,6 +533,13 @@ def _collect_price_data(ticker: str) -> Dict[str, Any]:
     returns = closes.pct_change().dropna()
     if not returns.empty:
         data["volatility"] = float(returns.std() * math.sqrt(252) * 100)
+    if len(closes) > 1:
+        prev = float(closes.iloc[-2])
+        change = data["latest_price"] - prev
+        data["daily_change"] = change
+        data["daily_change_pct"] = ((data["latest_price"] / prev) - 1) * 100 if prev else None
+    data["period_high"] = float(closes.max())
+    data["period_low"] = float(closes.min())
     return data
 
 
@@ -501,17 +611,24 @@ def _build_option_chart_series(calls, puts):
         if strike is None:
             continue
         strikes.setdefault(strike, {})["call"] = row.get("oi", 0)
+        if row.get("iv") is not None:
+            strikes[strike]["call_iv"] = row.get("iv")
     for row in puts:
         strike = row.get("strike")
         if strike is None:
             continue
         strikes.setdefault(strike, {})["put"] = row.get("oi", 0)
+        if row.get("iv") is not None:
+            strikes[strike]["put_iv"] = row.get("iv")
 
     sorted_strikes = sorted(strikes.keys())
     return {
         "chart_strikes": [f"{strike:.0f}" for strike in sorted_strikes],
         "chart_calls": [strikes[strike].get("call", 0) for strike in sorted_strikes],
         "chart_puts": [strikes[strike].get("put", 0) for strike in sorted_strikes],
+        "iv_labels": [f"{strike:.0f}" for strike in sorted_strikes],
+        "iv_calls": [strikes[strike].get("call_iv") or 0 for strike in sorted_strikes],
+        "iv_puts": [strikes[strike].get("put_iv") or 0 for strike in sorted_strikes],
     }
 
 
@@ -649,17 +766,32 @@ def _extract_risk_metrics(blob) -> Dict[str, Any]:
 def _render_price_stats(data: Dict[str, Any]) -> str:
     if not data:
         return "<p class='muted'>Price history unavailable.</p>"
-    latest = _format_currency(data.get("latest_price"))
-    vol = _format_percent(data.get("volatility"))
+    change = data.get("daily_change")
+    change_pct = data.get("daily_change_pct")
     rows = [
-        f"<li><span>Last Close</span><strong>{latest}</strong></li>",
-        f"<li><span>Realized Vol (ann.)</span><strong>{vol}</strong></li>",
+        f"<li><span>Last Close</span><strong>{_format_currency(data.get('latest_price'))}</strong></li>",
+        f"<li><span>Daily Change</span><strong>{_format_currency(change)} ({_format_percent(change_pct)})</strong></li>",
+        f"<li><span>5D Return</span><strong>{_format_percent((data.get('changes') or {}).get('5D'))}</strong></li>",
+        f"<li><span>Monthly Range</span><strong>{_format_currency(data.get('period_low'))} → {_format_currency(data.get('period_high'))}</strong></li>",
+        f"<li><span>Avg Volume</span><strong>{_format_number(data.get('avg_volume'))}</strong></li>",
+        f"<li><span>Realized Vol (ann.)</span><strong>{_format_percent(data.get('volatility'))}</strong></li>",
     ]
-    for label, value in (data.get("changes") or {}).items():
-        rows.append(
-            f"<li><span>{escape(label)}</span><strong>{_format_percent(value)}</strong></li>"
-        )
     return f"<ul class='stats-list'>{''.join(rows)}</ul>"
+
+
+def _render_options_metrics(data: Dict[str, Any]) -> str:
+    if not data:
+        return "<p class='muted'>Options data unavailable.</p>"
+    rows = [
+        ("Next Expiry", data.get("expiry") or "—"),
+        ("Call/Put OI", f"{data.get('call_put_ratio'):.2f}" if data.get("call_put_ratio") else "—"),
+        ("Avg Call IV", _format_percent(data.get("avg_call_iv"))),
+        ("Avg Put IV", _format_percent(data.get("avg_put_iv"))),
+        ("Total Call OI", _format_number(data.get("call_oi"))),
+        ("Total Put OI", _format_number(data.get("put_oi"))),
+    ]
+    items = [f"<li><span>{escape(label)}</span><strong>{value}</strong></li>" for label, value in rows]
+    return f"<ul class='stats-list'>{''.join(items)}</ul>"
 
 
 def _render_options_summary(data: Dict[str, Any]) -> str:
@@ -885,6 +1017,26 @@ def _render_agent_sections(final_state: Dict[str, Any]) -> str:
     return "".join(blocks)
 
 
+def _render_highlights(final_state: Dict[str, Any]) -> str:
+    sections = [
+        ("Macro Outlook", final_state.get("macro_report")),
+        ("Market Analysis", final_state.get("market_report")),
+        ("News Summary", final_state.get("news_report")),
+        ("Sentiment", final_state.get("sentiment_report")),
+    ]
+    cards = []
+    for title, content in sections:
+        snippet = _summarize_text(content)
+        if not snippet:
+            continue
+        cards.append(
+            f"<div class='highlight'><h3>{escape(title)}</h3><p class='muted'>{snippet}</p></div>"
+        )
+    if not cards:
+        return "<p class='muted'>Narrative snippets unavailable for this run.</p>"
+    return f"<div class='highlight-grid'>{''.join(cards)}</div>"
+
+
 def _markdown_block(title: str, content: Optional[str]) -> str:
     if not content:
         return ""
@@ -902,6 +1054,17 @@ def _summarize_trade(final_state: Dict[str, Any]) -> str:
     symbol = trade.get("symbol") or trade.get("underlying_symbol") or "—"
 
     return f"{action} {qty} {instrument} in {symbol}"
+
+
+def _summarize_text(content: Optional[str], limit: int = 320) -> str:
+    if not content:
+        return ""
+    text = " ".join(content.strip().split())
+    if not text:
+        return ""
+    if len(text) > limit:
+        text = text[:limit].rsplit(" ", 1)[0] + "…"
+    return escape(text)
 
 
 def _format_currency(value) -> str:
