@@ -24,7 +24,6 @@ redis
 chainlit
 rich
 markdown
-aiohttp
 backoff
 pydantic
 questionary

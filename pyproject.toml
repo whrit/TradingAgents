@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "aiohttp>=3.12.13",
     "akshare>=1.16.98",
     "alpaca-py>=0.43.2",
     "backoff>=2.2.1",
