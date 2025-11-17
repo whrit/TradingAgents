@@ -331,19 +331,20 @@ AGENT_SECTIONS = [
 
 def generate_html_report(
     final_state: Dict[str, Any],
-    selections: Dict[str, Any],
+    metadata: Optional[Dict[str, Any]],
     report_dir: Path,
 ) -> Optional[Path]:
     """
     Build a standalone HTML report that mirrors the CLI experience with charts and tables.
     """
+    metadata = metadata or {}
 
     ticker = (
-        selections.get("ticker")
+        metadata.get("ticker")
         or final_state.get("company_of_interest")
         or "UNKNOWN"
     ).upper()
-    analysis_date = selections.get("analysis_date") or final_state.get("trade_date")
+    analysis_date = metadata.get("analysis_date") or final_state.get("trade_date")
     analysis_date = (analysis_date or dt.date.today().isoformat()).replace("/", "-")
 
     price_data = _collect_price_data(ticker)
@@ -367,14 +368,14 @@ def generate_html_report(
         ticker=escape(ticker),
         analysis_date=escape(analysis_date),
         generated_at=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        research_depth=selections.get("research_depth", "n/a"),
+        research_depth=metadata.get("research_depth", "n/a"),
         llm_provider=escape(
-            f"{(selections.get('llm_provider') or '').upper()} | "
-            f"{selections.get('deep_thinker') or 'deep'} / "
-            f"{selections.get('shallow_thinker') or 'quick'}"
+            f"{(metadata.get('llm_provider') or '').upper()} | "
+            f"{metadata.get('deep_thinker') or 'deep'} / "
+            f"{metadata.get('shallow_thinker') or 'quick'}"
         ),
         instrument_choice=escape(
-            (selections.get("instrument_type") or "shares").replace("_", " ").title()
+            (metadata.get("instrument_type") or "shares").replace("_", " ").title()
         ),
         trade_summary=escape(_summarize_trade(final_state)),
         price_stats_html=_render_price_stats(price_data),

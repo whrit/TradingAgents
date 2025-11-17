@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.webz.io/newsApiLite"
 DEFAULT_MACRO_QUERY = "(economy OR markets OR macroeconomic)"
 MAX_POSTS_PER_CALL = 10
+RESERVED_CHARS = set(r'+-=!(){}[]^"~*?:\/')
 
 
 def _current_timestamp() -> str:
@@ -55,6 +56,42 @@ class RateLimiter:
                 if wait_seconds > 0:
                     time.sleep(wait_seconds)
             self.calls.append(now)
+
+
+_COMPANY_ALIAS_CACHE: Dict[str, Optional[str]] = {}
+
+
+def _escape_term(term: str) -> str:
+    escaped = []
+    for char in term:
+        if char in RESERVED_CHARS:
+            escaped.append(f"\\{char}")
+        else:
+            escaped.append(char)
+    return "".join(escaped)
+
+
+def _lookup_company_alias(symbol: str) -> Optional[str]:
+    symbol = (symbol or "").upper()
+    if not symbol:
+        return None
+    if symbol in _COMPANY_ALIAS_CACHE:
+        return _COMPANY_ALIAS_CACHE[symbol]
+
+    alias = None
+    try:
+        import yfinance as yf  # Lazy import to avoid slowing startup
+
+        ticker = yf.Ticker(symbol)
+        info = ticker.info or {}
+        alias = info.get("longName") or info.get("shortName")
+    except Exception:
+        alias = None
+
+    if alias:
+        alias = alias.strip()
+    _COMPANY_ALIAS_CACHE[symbol] = alias or None
+    return _COMPANY_ALIAS_CACHE[symbol]
 
 
 class NewsApiLiteClient:
@@ -132,11 +169,41 @@ def _client() -> NewsApiLiteClient:
     return _CLIENT
 
 
-def _build_query(symbol: str, start_date: str, end_date: str) -> Tuple[str, int]:
+def _build_query(
+    symbol: str,
+    start_date: str,
+    end_date: str,
+    *,
+    include_alias: bool = True,
+) -> Tuple[str, int, bool]:
     start_ts = _to_timestamp_ms(start_date)
     end_ts = _to_timestamp_ms(end_date) + 24 * 60 * 60 * 1000
-    query = f"{symbol} AND published:>{start_ts} AND published:<{end_ts}"
-    return query, start_ts
+    escaped_symbol = _escape_term(symbol.upper())
+    search_terms = [
+        f'ticker:"{escaped_symbol}"',
+        f'"{escaped_symbol}"',
+    ]
+    alias_used = False
+    if include_alias:
+        alias = _lookup_company_alias(symbol)
+        if alias and alias.lower() != symbol.lower():
+            escaped_alias = _escape_term(alias)
+            search_terms.extend(
+                [
+                    f'organization:"{escaped_alias}"',
+                    f'"{escaped_alias}"',
+                ]
+            )
+            alias_used = True
+    unique_terms: List[str] = []
+    seen = set()
+    for term in search_terms:
+        if term not in seen:
+            unique_terms.append(term)
+            seen.add(term)
+    combined_terms = " OR ".join(unique_terms)
+    query = f"({combined_terms}) AND published:>{start_ts} AND published:<{end_ts}"
+    return query, start_ts, alias_used
 
 
 def _build_macro_query(curr_date: str, look_back_days: int) -> Tuple[str, int]:
@@ -192,8 +259,25 @@ def get_news_api_lite(
     if not ticker:
         raise ValueError("ticker is required for News API Lite lookups.")
 
-    query, start_ts = _build_query(ticker, start_date, end_date)
-    posts, meta = _client().fetch_posts(query, start_ts, limit, max_pages=max_pages)
+    query, start_ts, alias_used = _build_query(ticker, start_date, end_date)
+    client = _client()
+    try:
+        posts, meta = client.fetch_posts(query, start_ts, limit, max_pages=max_pages)
+    except requests.RequestException as exc:
+        response = getattr(exc, "response", None)
+        status = getattr(response, "status_code", None)
+        if alias_used:
+            try:
+                fallback_query, _, _ = _build_query(
+                    ticker, start_date, end_date, include_alias=False
+                )
+                posts, meta = client.fetch_posts(
+                    fallback_query, start_ts, limit, max_pages=max_pages
+                )
+            except requests.RequestException:
+                raise exc
+        else:
+            raise
     return _serialize_response(
         "ticker",
         {

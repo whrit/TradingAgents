@@ -258,11 +258,9 @@ def route_to_vendor(method: str, *args, **kwargs):
             result_summary = f"Got {len(vendor_results)} result(s)"
             print(f"SUCCESS: Vendor '{vendor}' succeeded - {result_summary}")
             
-            # Stopping logic: Stop after first successful vendor for single-vendor configs
-            # Multiple vendor configs (comma-separated) may want to collect from multiple sources
-            if len(primary_vendors) == 1:
-                print(f"DEBUG: Stopping after successful vendor '{vendor}' (single-vendor config)")
-                break
+            # Stop after the first successful vendor unless explicitly aggregating via tool-level logic.
+            print(f"DEBUG: Stopping after successful vendor '{vendor}' (results already obtained)")
+            break
         else:
             print(f"FAILED: Vendor '{vendor}' produced no results")
 

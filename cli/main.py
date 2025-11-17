@@ -35,7 +35,7 @@ from tradingagents.brokers.interface import route_to_broker
 from tradingagents.dataflows.interface import route_to_vendor
 from cli.models import AnalystType
 from cli.utils import *
-from cli.html_report import generate_html_report
+from tradingagents.reporting.html_report import generate_html_report
 
 console = Console()
 

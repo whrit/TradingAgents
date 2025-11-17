@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+import requests
 
 from tradingagents.dataflows import news_api_lite
 
@@ -57,6 +58,7 @@ def setup_client(monkeypatch, responses):
 
 
 def test_get_news_serializes_articles(monkeypatch):
+    monkeypatch.setattr(news_api_lite, "_lookup_company_alias", lambda symbol: "Acme Inc")
     response_payload = {
         "posts": [sample_post(title="Ticker Headline")],
         "next": None,
@@ -76,11 +78,14 @@ def test_get_news_serializes_articles(monkeypatch):
     assert payload["meta"]["requests_left"] == 990
 
     assert calls[0].url == news_api_lite.BASE_URL
-    assert "AAPL" in calls[0].params["q"]
+    query = calls[0].params["q"]
+    assert 'ticker:"AAPL"' in query
+    assert 'organization:"Acme Inc"' in query
     assert "published:>" in calls[0].params["q"]
 
 
 def test_follow_next_page(monkeypatch):
+    monkeypatch.setattr(news_api_lite, "_lookup_company_alias", lambda symbol: "Acme Inc")
     first_page = {
         "posts": [sample_post(uuid="1")],
         "next": "/newsApiLite?token=token-123&q=AAPL&ts=0&from=10",
@@ -130,3 +135,29 @@ def test_missing_token_raises(monkeypatch):
     monkeypatch.delenv("WEBZ_API_TOKEN", raising=False)
     with pytest.raises(ValueError):
         news_api_lite.get_news_api_lite("AAPL", "2025-01-01", "2025-01-05")
+
+
+def test_alias_fallback_on_server_error(monkeypatch):
+    monkeypatch.setattr(news_api_lite, "_lookup_company_alias", lambda symbol: "Acme Inc")
+
+    class StubClient:
+        def __init__(self):
+            self.calls = []
+
+        def fetch_posts(self, query, ts, limit, max_pages=5):
+            self.calls.append(query)
+            if len(self.calls) == 1:
+                response = SimpleNamespace(status_code=500)
+                raise requests.HTTPError("server error", response=response)
+            return ([sample_post(title="Recovered")], {"totalResults": 1})
+
+    stub = StubClient()
+    monkeypatch.setattr(news_api_lite, "_client", lambda: stub)
+
+    payload = json.loads(
+        news_api_lite.get_news_api_lite("AAPL", "2025-01-01", "2025-01-05")
+    )
+    assert payload["articles"][0]["title"] == "Recovered"
+    assert len(stub.calls) == 2
+    assert "\"Acme Inc\"" in stub.calls[0]
+    assert "\"Acme Inc\"" not in stub.calls[1]
