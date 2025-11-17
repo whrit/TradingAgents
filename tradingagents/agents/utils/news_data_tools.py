@@ -16,7 +16,7 @@ def _normalized_ticker(value: Optional[str]) -> str:
         raise ValueError("Ticker symbol is required before requesting news.")
     if " " in normalized:
         raise ValueError(
-            "Alpha Vantage news lookups require pure ticker strings without spaces."
+            "Tiingo news lookups require pure ticker strings or comma-separated tickers without spaces."
         )
     if not VALID_TICKER_PATTERN.fullmatch(normalized):
         raise ValueError(

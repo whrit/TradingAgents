@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
         "core_stock_apis": "alpha_vantage",       # Options: yfinance, alpha_vantage, local
         "technical_indicators": "alpha_vantage",  # Options: yfinance, alpha_vantage, local
         "fundamental_data": "alpha_vantage", # Options: openai, alpha_vantage, local
-        "news_data": "google",        # Options: openai, alpha_vantage, google, local
+        "news_data": "tiingo,google",        # Options: tiingo, openai, alpha_vantage, google, local
         "options_data": "alpaca",          # Options: yfinance
     },
     # Tool-level configuration (takes precedence over category-level)

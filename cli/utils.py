@@ -8,7 +8,7 @@ console = rich.console.Console()
 ANALYST_ORDER = [
     ("Macro Economist", AnalystType.MACRO),
     ("Market Analyst", AnalystType.MARKET),
-    ("Social Media Analyst", AnalystType.SOCIAL),
+    ("Social Analyst", AnalystType.SOCIAL),
     ("News Analyst", AnalystType.NEWS),
     ("Fundamentals Analyst", AnalystType.FUNDAMENTALS),
     ("Alternative Data Analyst", AnalystType.ALTERNATIVE),

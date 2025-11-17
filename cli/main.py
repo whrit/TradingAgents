@@ -35,8 +35,28 @@ from tradingagents.brokers.interface import route_to_broker
 from tradingagents.dataflows.interface import route_to_vendor
 from cli.models import AnalystType
 from cli.utils import *
+from cli.html_report import generate_html_report
 
 console = Console()
+
+TEAM_STRUCTURE = {
+    "Analyst Team": [
+        "Macro Economist",
+        "Market Analyst",
+        "Social Analyst",
+        "News Analyst",
+        "Fundamentals Analyst",
+        "Alternative Data Analyst",
+    ],
+    "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
+    "Trading Team": ["Trader", "Risk Quant Analyst"],
+    "Risk Management": ["Risky Analyst", "Neutral Analyst", "Safe Analyst"],
+    "Portfolio & Execution": [
+        "Portfolio Manager",
+        "Execution Strategist",
+        "Compliance Officer",
+    ],
+}
 
 app = typer.Typer(
     name="TradingAgents",
@@ -931,20 +951,7 @@ def update_display(layout, spinner_text=None):
     progress_table.add_column("Status", style="yellow", justify="center", width=20)
 
     # Group agents by team
-    teams = {
-        "Analyst Team": [
-            "Market Analyst",
-            "Social Analyst",
-            "News Analyst",
-            "Fundamentals Analyst",
-        ],
-        "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
-        "Trading Team": ["Trader"],
-        "Risk Management": ["Risky Analyst", "Neutral Analyst", "Safe Analyst"],
-        "Portfolio Management": ["Portfolio Manager"],
-    }
-
-    for team, agents in teams.items():
+    for team, agents in TEAM_STRUCTURE.items():
         # Add first agent with team name
         first_agent = agents[0]
         status = message_buffer.agent_status[first_agent]
@@ -2165,6 +2172,21 @@ def run_analysis():
 
         # Display the complete final report
         display_complete_report(final_state)
+        try:
+            html_path = generate_html_report(
+                final_state,
+                selections,
+                report_dir,
+            )
+            if html_path:
+                console.print(
+                    f"[green]Saved HTML report to {html_path}[/green]"
+                )
+        except Exception as exc:  # pragma: no cover - reporting helper shouldn't halt CLI
+            console.print(
+                f"[red]Failed to generate HTML report: {exc}[/red]"
+            )
+
         prompt_trade_execution(final_state, config)
 
         update_display(layout)

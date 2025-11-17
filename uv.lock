@@ -5087,8 +5087,10 @@ name = "tradingagents"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "akshare" },
     { name = "alpaca-py" },
+    { name = "backoff" },
     { name = "backtrader" },
     { name = "chainlit" },
     { name = "chromadb" },
@@ -5101,11 +5103,13 @@ dependencies = [
     { name = "langchain-google-genai" },
     { name = "langchain-openai" },
     { name = "langgraph" },
+    { name = "markdown" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas" },
     { name = "parsel" },
     { name = "praw" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
@@ -5128,8 +5132,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.12.13" },
     { name = "akshare", specifier = ">=1.16.98" },
     { name = "alpaca-py", specifier = ">=0.43.2" },
+    { name = "backoff", specifier = ">=2.2.1" },
     { name = "backtrader", specifier = ">=1.9.78.123" },
     { name = "chainlit", specifier = ">=2.5.5" },
     { name = "chromadb", specifier = ">=1.0.12" },
@@ -5142,10 +5148,12 @@ requires-dist = [
     { name = "langchain-google-genai", specifier = ">=2.1.5" },
     { name = "langchain-openai", specifier = ">=0.3.23" },
     { name = "langgraph", specifier = ">=0.4.8" },
+    { name = "markdown", specifier = ">=3.9" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pandas", specifier = ">=2.3.0" },
     { name = "parsel", specifier = ">=1.10.0" },
     { name = "praw", specifier = ">=7.8.1" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-mock", specifier = ">=3.15.1" },

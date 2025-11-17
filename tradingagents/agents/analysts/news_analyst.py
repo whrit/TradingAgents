@@ -33,7 +33,7 @@ Produce a comprehensive, clearly structured report on the current macro and mark
 
     When you need information:
     1. Use get_global_news first to understand the macro backdrop (growth, inflation, policy, risk sentiment).
-    2. Use get_news for specific tickers that appear important in the macro scan. Alpha Vantage only accepts ticker strings without spaces; if you need thematic coverage, lean on get_global_news or synthesize across multiple ticker lookups.
+    2. Use get_news for specific tickers that appear important in the macro scan. Tiingo expects comma-separated ticker strings without spaces; if you need thematic coverage, lean on get_global_news or synthesize across multiple ticker lookups.
     Always base your analysis on the retrieved information; do not hallucinate headlines or events.
 
 </TOOLS>

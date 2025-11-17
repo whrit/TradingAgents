@@ -121,11 +121,12 @@ pip install -r requirements.txt
 
 ### Required APIs
 
-You will need the OpenAI API for all the agents, and [Alpha Vantage API](https://www.alphavantage.co/support/#api-key) for fundamental and news data (default configuration). Voyage AI is optional but enables higher quality or private embeddings.
+You will need the OpenAI API for all the agents, the [Alpha Vantage API](https://www.alphavantage.co/support/#api-key) for fundamental data, and the [Tiingo News API](https://www.tiingo.com/documentation/general/tiingo-news) for news/sentiment coverage (default configuration). Voyage AI is optional but enables higher quality or private embeddings.
 
 ```bash
 export OPENAI_API_KEY=$YOUR_OPENAI_API_KEY
 export ALPHA_VANTAGE_API_KEY=$YOUR_ALPHA_VANTAGE_API_KEY
+export TIINGO_API_KEY=$YOUR_TIINGO_API_KEY
 export VOYAGE_API_KEY=$YOUR_VOYAGE_API_KEY
 ```
 
@@ -135,7 +136,7 @@ cp .env.example .env
 # Edit .env with your actual API keys
 ```
 
-**Note:** We are happy to partner with Alpha Vantage to provide robust API support for TradingAgents. You can get a free AlphaVantage API [here](https://www.alphavantage.co/support/#api-key), TradingAgents-sourced requests also have increased rate limits to 60 requests per minute with no daily limits. Typically the quota is sufficient for performing complex tasks with TradingAgents thanks to Alpha Vantage’s open-source support program. If you prefer to use OpenAI for these data sources instead, you can modify the data vendor settings in `tradingagents/default_config.py`.
+**Note:** We are happy to partner with Alpha Vantage to provide robust fundamental data and Tiingo for rich news coverage in TradingAgents. You can get a free AlphaVantage API [here](https://www.alphavantage.co/support/#api-key) and request Tiingo access [here](https://www.tiingo.com/documentation/general/tiingo-news). TradingAgents-sourced requests enjoy elevated limits, but you can always switch vendors (e.g., to OpenAI or Google News fallbacks) via `tradingagents/default_config.py`.
 
 ### CLI Usage
 
