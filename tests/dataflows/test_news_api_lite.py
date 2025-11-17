@@ -83,7 +83,7 @@ def test_get_news_serializes_articles(monkeypatch):
 def test_follow_next_page(monkeypatch):
     first_page = {
         "posts": [sample_post(uuid="1")],
-        "next": "https://api.webz.io/newsApiLite?token=token-123&q=AAPL&ts=0&from=10",
+        "next": "/newsApiLite?token=token-123&q=AAPL&ts=0&from=10",
         "totalResults": 15,
         "moreResultsAvailable": 5,
         "requestsLeft": 998,
@@ -102,7 +102,8 @@ def test_follow_next_page(monkeypatch):
     )
 
     assert len(payload["articles"]) == 2
-    assert calls[1].url == first_page["next"]
+    assert calls[1].url.startswith("https://")
+    assert "/newsApiLite" in calls[1].url
     assert calls[1].params is None  # next URL already includes params
 
 

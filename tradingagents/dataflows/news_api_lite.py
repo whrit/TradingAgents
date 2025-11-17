@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urljoin
 
 import backoff
 import requests
@@ -109,6 +110,8 @@ class NewsApiLiteClient:
             page_meta["moreResultsAvailable"] = data.get("moreResultsAvailable", page_meta["moreResultsAvailable"])
 
             next_url = data.get("next")
+            if next_url and not next_url.startswith("http"):
+                next_url = urljoin(BASE_URL, next_url)
 
         return posts[:limit], page_meta
 
